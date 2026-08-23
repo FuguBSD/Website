@@ -23,7 +23,7 @@ The specification in [spec/](spec/index.md) is the authoritative reference. Read
 
 ```sh
 make check       # spec-check + ste-lint + test
-make prettier    # Markdown, JSON and YAML formatting check
+make format-md   # Markdown, JSON and YAML formatting check
 fuguweb build --out web/build
 fuguweb check --out web/build
 ```
