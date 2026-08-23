@@ -1,0 +1,8 @@
+# Website build
+web/build/
+
+# Exploratory testing
+explore/
+
+# Agent files
+SCRATCHPAD*.md
