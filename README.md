@@ -19,10 +19,12 @@ is the authoritative reference.
 
 ```sh
 make check       # spec-check + ste-lint + test
-make format-md   # Markdown, JSON and YAML formatting check
 fuguweb build --out web/build
 fuguweb check --out web/build
 ```
+
+`make check` runs the Markdown format gate, and prettier runs through bunx. The
+operator installs bun, for example from Homebrew. No deps manifest provides it.
 
 ## Commit scopes
 
