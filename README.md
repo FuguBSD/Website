@@ -24,8 +24,15 @@ fuguweb check --out web/build
 ```
 
 `make check` runs the Markdown format gate, and prettier runs through bunx. The
-operator installs bun and gitleaks, for example from Homebrew. No deps manifest
-provides them.
+operator installs bun, for example from Homebrew. The manifest does not provide
+it, because the format gate needs `bunx` before a target can run.
+
+`make deps` installs gitleaks, the tool of the secret gate, and signify, the
+tool of the key rotation. It installs the `tool` environment before every other
+environment, so the gate tool is present for each chain. `deps/SHA256.txt`
+records the sha256 digest of each versioned download, and `make deps` compares
+the downloaded bytes against it. The CI gate installs gitleaks the same way, so
+one pin serves the operator gate and the CI gate.
 
 ## Commit scopes
 
