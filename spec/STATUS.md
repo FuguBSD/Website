@@ -20,10 +20,12 @@ phase applies.
 
 ## Units
 
-| Unit                                 | State | Done by | Note                                                                         |
-| ------------------------------------ | ----- | ------- | ---------------------------------------------------------------------------- |
-| [SITE-CONTENT](site.md#site-content) | done  | —       | [index.body.html](../web/index.body.html)                                    |
-| [SITE-BUILD](site.md#site-build)     | done  | —       | [.fuguwebrc](../.fuguwebrc), [publish.yml](../.github/workflows/publish.yml) |
+| Unit                                 | State   | Done by | Note                                                                                                                           |
+| ------------------------------------ | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| [SITE-CONTENT](site.md#site-content) | done    | —       | [index.body.html](../web/index.body.html)                                                                                      |
+| [SITE-BUILD](site.md#site-build)     | done    | —       | [.fuguwebrc](../.fuguwebrc), [publish.yml](../.github/workflows/publish.yml)                                                   |
+| [SITE-KEYS](site.md#site-keys)       | partial | —       | [.fuguwebrc](../.fuguwebrc) holds the `keys` block only when the first run of the rotation writes it. No key is published yet. |
+| [SITE-ROTATE](site.md#site-rotate)   | done    | —       | [rotate-key](../scripts/rotate-key), [rotate-key.yml](../.github/workflows/rotate-key.yml), [rotate.t](../t/rotate.t)          |
 
 ## Update protocol
 
@@ -36,9 +38,9 @@ phase applies.
 
 The drift gate maps each document to the code that implements it.
 
-| Document | Roots                          |
-| -------- | ------------------------------ |
-| site.md  | `web`, `.fuguwebrc`, `.github` |
+| Document | Roots                                                  |
+| -------- | ------------------------------------------------------ |
+| site.md  | `web`, `.fuguwebrc`, `.github`, `scripts`, `t`, `deps` |
 
 ## Retired IDs
 

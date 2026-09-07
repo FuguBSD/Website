@@ -1,0 +1,4 @@
+# External dependencies of the website. scripts/deps installs each
+# line. The rotation workflow signs the key manifest, so it needs
+# signify(1). The site build itself signs nothing.
+tool pkg signify-openbsd
