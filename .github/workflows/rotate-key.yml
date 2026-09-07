@@ -140,16 +140,29 @@ jobs:
           work=$(mktemp -d)
           echo "WORK=$work" >> "$GITHUB_ENV"
           umask 077
+          chmod 700 "$work"
+          # signify(1) refuses a key file with no final newline, so
+          # a file that holds a key ends in one. A slot that holds
+          # nothing must leave an empty file: the steps below read
+          # the size of each file to tell a key from no key, and a
+          # lone newline would read as a key.
           : > "$work/active.sec"
           : > "$work/idle.sec"
+
           case "$ACTIVE" in
-            A) printf '%s' "$KEY_A" > "$work/active.sec" ;;
-            B) printf '%s' "$KEY_B" > "$work/active.sec" ;;
+            A) active="$KEY_A" ;;
+            B) active="$KEY_B" ;;
+            *) active="" ;;
           esac
           case "$IDLE" in
-            A) printf '%s' "$KEY_A" > "$work/idle.sec" ;;
-            B) printf '%s' "$KEY_B" > "$work/idle.sec" ;;
+            A) idle="$KEY_A" ;;
+            B) idle="$KEY_B" ;;
+            *) idle="" ;;
           esac
+
+          [ -n "$active" ] && printf '%s\n' "$active" > "$work/active.sec"
+          [ -n "$idle" ] && printf '%s\n' "$idle" > "$work/idle.sec"
+          true
 
       - name: Run the rotation step
         id: rotate
