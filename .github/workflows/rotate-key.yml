@@ -93,8 +93,11 @@ jobs:
           gh api -i /installation/repositories 2>/dev/null \
             | grep -i '^x-accepted-github-permissions:' || true
 
-      - name: Install signify
-        run: make deps tool
+      # make deps installs the tool environment and then the
+      # runtime one. The tool environment holds signify, which signs
+      # the manifest, and gitleaks, which this job does not run.
+      - name: Install the dependencies
+        run: make deps
 
       # The script reads the key directory through the Fugu modules,
       # so the site and the rotation share one implementation of the
