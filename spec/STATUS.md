@@ -20,12 +20,12 @@ phase applies.
 
 ## Units
 
-| Unit                                 | State   | Done by | Note                                                                                                                           |
-| ------------------------------------ | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| [SITE-CONTENT](site.md#site-content) | done    | —       | [index.body.html](../web/index.body.html)                                                                                      |
-| [SITE-BUILD](site.md#site-build)     | done    | —       | [.fuguwebrc](../.fuguwebrc), [publish.yml](../.github/workflows/publish.yml)                                                   |
-| [SITE-KEYS](site.md#site-keys)       | partial | —       | [.fuguwebrc](../.fuguwebrc) holds the `keys` block only when the first run of the rotation writes it. No key is published yet. |
-| [SITE-ROTATE](site.md#site-rotate)   | done    | —       | [rotate-key](../scripts/rotate-key), [rotate-key.yml](../.github/workflows/rotate-key.yml), [rotate.t](../t/rotate.t)          |
+| Unit                                 | State   | Done by | Note                                                                                                                                                        |
+| ------------------------------------ | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [SITE-CONTENT](site.md#site-content) | done    | —       | [index.body.html](../web/index.body.html)                                                                                                                   |
+| [SITE-BUILD](site.md#site-build)     | done    | —       | [.fuguwebrc](../.fuguwebrc), [publish.yml](../.github/workflows/publish.yml)                                                                                |
+| [SITE-KEYS](site.md#site-keys)       | partial | —       | Absent: every rule. `.fuguwebrc` holds no `keys` block, and `web/keys/` does not exist. The first mint writes both.                                         |
+| [SITE-ROTATE](site.md#site-rotate)   | done    | —       | [rotate-key.yml](../.github/workflows/rotate-key.yml), [workflows.t](../t/ci/workflows.t). `fuguweb rotate-key` holds the rotation, per FuguWeb WEB-ROTATE. |
 
 ## Update protocol
 

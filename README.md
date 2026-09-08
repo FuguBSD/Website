@@ -27,9 +27,11 @@ fuguweb check --out web/build
 operator installs bun, for example from Homebrew. The manifest does not provide
 it, because the format gate needs `bunx` before a target can run.
 
-`make deps` installs gitleaks, the tool of the secret gate, and signify, the
-tool of the key rotation. It installs the `tool` environment before every other
-environment, so the gate tool is present for each chain. `deps/SHA256.txt`
+`make deps` installs gitleaks, the tool of the secret gate, and signify, which
+`fuguweb rotate-key` needs to sign the key manifest. It installs the `tool`
+environment before every other environment, so the gate tool is present for each
+chain. The rotation workflow holds no rotation logic of its own: it installs
+`fuguweb` from a release and calls it, per FuguWeb WEB-ROTATE. `deps/SHA256.txt`
 records the sha256 digest of each versioned download, and `make deps` compares
 the downloaded bytes against it. The CI gate installs gitleaks the same way, so
 one pin serves the operator gate and the CI gate.
