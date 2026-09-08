@@ -87,30 +87,31 @@ jobs:
       # Every install runs before the token step, per
       # SITE-ROTATE-15. Unpinned code must never run beside the App
       # credentials or a private key.
+      # fuguweb comes from a release and never from a checkout, per
+      # SITE-ROTATE-14. Fugu holds the generic key directory parts,
+      # so both tarballs install here. deps/Linux.txt pins each
+      # version, per SITE-ROTATE-15: this job runs the installed code
+      # beside a private key, so a later release must not reach the
+      # key before a human reads the change.
+      #
+      # Both entries take the signify tier, so scripts/deps verifies
+      # the signed manifest of each release with the declared key
+      # before cpanm reads the tarball.
       - name: Install the dependencies
         run: |
           make deps
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # cpanm with no root writes to the default local library of
+          # the user, and PATH does not hold its bin directory. With
+          # root it writes to /usr/local/bin, which PATH holds
+          # already, so the extra entry is harmless.
+          echo "$HOME/perl5/bin" >> "$GITHUB_PATH"
 
-      # fuguweb comes from a release and never from a checkout, per
-      # SITE-ROTATE-14. Fugu holds the generic key directory parts,
-      # so both tarballs install here.
-      # Each version is pinned, per SITE-ROTATE-15. This job runs the
-      # installed code beside a private key, so a later release must
-      # not reach the key before a human reads the change. Bump each
-      # version deliberately.
-      - name: Install fuguweb
-        env:
-          FUGU_VERSION: v0.3.0
-          FUGUWEB_VERSION: v0.4.0
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes cpanminus mandoc lowdown
-          sudo cpanm --notest \
-            "https://github.com/FuguBSD/Fugu/releases/download/$FUGU_VERSION/Fugu.tar.gz"
-          sudo cpanm --notest \
-            "https://github.com/FuguBSD/FuguWeb/releases/download/$FUGUWEB_VERSION/App-FuguWeb.tar.gz"
-          fuguweb --help >/dev/null
+      # The install must leave fuguweb on PATH, and a run that found
+      # no command would fail many steps later, with a key already
+      # generated.
+      - name: Confirm that fuguweb runs
+        run: fuguweb --help >/dev/null
 
       # The token comes from the release engineering GitHub App. An
       # installation token lives an hour, so a leak expires, and no

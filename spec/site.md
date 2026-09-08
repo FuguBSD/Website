@@ -78,9 +78,14 @@ takes site content alone, per D-01.
 - **SITE-ROTATE-14** — The workflow must call `fuguweb rotate-key` for each
   step. It must install `fuguweb` from a release, and never from a checkout.
 - **SITE-ROTATE-15** — Each install must run in its own step, before the step
-  that mints the token, and must name the version that it installs. This job
-  runs the installed code beside a private key, so a later release must not
-  reach that key before a human reads the change.
+  that mints the token. The deps manifest must name the version that it
+  installs, and the workflow must run no install of its own. This job runs the
+  installed code beside a private key, so a later release must not reach that
+  key before a human reads the change.
+- **SITE-ROTATE-28** — Each `dist` entry of the manifest must name a versioned
+  release URL, so `scripts/deps` verifies the signed manifest of that release
+  with the declared key. A plain `cpanm` of a URL reads the tarball with no
+  check at all.
 - **SITE-ROTATE-16** — The workflow must mask the private key that a mint
   writes. It must read the key from a file on standard input, because a command
   line shows the key in the process table.

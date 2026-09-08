@@ -23,6 +23,17 @@ open my $fh, '<', $path or die "cannot read $path: $!\n";
 my $yml = do { local $/; <$fh> };
 close $fh;
 
+# _slurp($path):
+#	Whole file as text, or undef.
+sub _slurp ($path)
+{
+	open my $in, '<', $path or return;
+	my $text = do { local $/; <$in> };
+	close $in;
+
+	return $text;
+}
+
 # _steps():
 #	The step names, in the order that the file holds them.
 sub _steps ()
@@ -60,7 +71,7 @@ subtest 'the steps of a rotation stand in order' => sub {
 	my @want = (
 		'Refuse a purpose that this workflow cannot address',
 		'Install the dependencies',
-		'Install fuguweb',
+		'Confirm that fuguweb runs',
 		'Mint an installation token',
 		'Run the rotation step',
 		'Store the new private key',
@@ -77,8 +88,11 @@ subtest 'the steps of a rotation stand in order' => sub {
 
 	# SITE-ROTATE-15. Unpinned code must not run beside the App
 	# credentials, so each install runs before the token.
-	ok( $at{'Install fuguweb'} < $at{'Mint an installation token'},
-		'each install runs before the token' );
+	ok(
+		$at{'Install the dependencies'} <
+		    $at{'Mint an installation token'},
+		'each install runs before the token'
+	);
 
 	# The guard reaches no credential.
 	ok(
@@ -249,16 +263,30 @@ subtest 'the workflow serves one purpose, and it says so' => sub {
 subtest 'each install names the version that it installs' => sub {
 
 	# SITE-ROTATE-15. This job runs the installed code beside a
-	# private key.
-	my $install = _step('Install fuguweb');
+	# private key, so the manifest pins each version. The workflow
+	# holds no install of its own.
+	my $install = _step('Install the dependencies');
 	ok( $install, 'the install step is there' ) or return;
+	# A command, and never a comment: the match starts the line.
+	unlike( $install, qr/^\s*(?:sudo\s+)?cpanm\b/m,
+		'the workflow runs no install of its own' );
 
-	unlike( $install, qr{releases/latest/download},
-		'no install reads the latest release' );
-	like( $install, qr/FUGU_VERSION: v\d+\.\d+\.\d+/,
-		'the Fugu version is pinned' );
-	like( $install, qr/FUGUWEB_VERSION: v\d+\.\d+\.\d+/,
-		'and the FuguWeb version' );
+	my $manifest = _slurp("$RealBin/../../deps/Linux.txt") // q{};
+	ok( length $manifest, 'the manifest is there' ) or return;
+
+	my @dists = $manifest =~ /^\s*runtime\s+dist\s+(\S+)$/mg;
+	is( scalar @dists, 2, 'the manifest names two distributions' );
+
+	for my $url (@dists) {
+		unlike( $url, qr{releases/latest/download},
+			"no install reads the latest release: $url" );
+		like( $url, qr{releases/download/v\d+\.\d+\.\d+/},
+			"the version is pinned: $url" );
+	}
+
+	like( join( ' ', @dists ), qr{/FuguBSD/Fugu/}, 'Fugu is one of them' );
+	like( join( ' ', @dists ), qr{/FuguBSD/FuguWeb/},
+		'and FuguWeb is the other' );
 };
 
 done_testing();
