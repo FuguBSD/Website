@@ -1,0 +1,454 @@
+name: Rotate a release key
+
+# The release key of FuguBSD lives online, as an organization secret,
+# and this workflow is the only thing that ever holds it. No human
+# handles key material at any point.
+#
+# The workflow holds the credential, the organization state and the
+# publication. It holds no rotation logic: `fuguweb rotate-key` writes
+# the key directory, and FuguWeb WEB-ROTATE states every trust rule of
+# that command. This repository takes site content alone, per D-01.
+#
+# Two secrets hold the private keys, and one organization variable
+# names the active slot:
+#
+#   SIGNIFY_RELEASE_KEY_A   secret     a signify private key
+#   SIGNIFY_RELEASE_KEY_B   secret     the other slot
+#   SIGNIFY_RELEASE_SLOT    variable   A or B
+#
+# The two names are fixed and the variable moves. A workflow that
+# named one fixed secret could not rotate without a human.
+#
+# The name of each secret carries the purpose word, and the secrets
+# context cannot build a name from an input, so this workflow serves
+# the release purpose alone and refuses another (SITE-ROTATE-17).
+#
+# Two steps make one rotation. A mint generates the next key, and the
+# current key signs the manifest that names it. A promote makes that
+# key current, after the Tooling change merges and after each consumer
+# syncs it.
+#
+# The order of the steps is the design. The key directory reaches main
+# and the site serves it, and only then does the organization state
+# move (SITE-ROTATE-18). A run that failed after a secret write would
+# leave the organization naming a key that no consumer can fetch.
+on:
+  workflow_dispatch:
+    inputs:
+      step:
+        description: "mint makes the next key; promote makes it current"
+        required: true
+        default: mint
+        type: choice
+        options:
+          - mint
+          - promote
+      purpose:
+        description: "What the key signs, for example release"
+        required: true
+        default: release
+        type: string
+
+permissions:
+  contents: write
+  # The workflow starts the publish of the site itself, per
+  # SITE-ROTATE-19. workflow_dispatch is the one event that
+  # GITHUB_TOKEN can raise, so the default token serves and the App
+  # needs no Actions grant.
+  actions: write
+
+concurrency:
+  group: release-key
+  cancel-in-progress: false
+
+jobs:
+  rotate:
+    name: Rotate
+    runs-on: ubuntu-latest
+    # Both App secrets live in this environment, and a job without
+    # the binding reads neither one.
+    environment: releng
+    steps:
+      # The guard runs first, so a purpose that this workflow cannot
+      # serve reaches no credential.
+      - name: Refuse a purpose that this workflow cannot address
+        env:
+          PURPOSE: ${{ inputs.purpose }}
+        run: |
+          if [ "$PURPOSE" != release ]; then
+            echo "rotate: this workflow holds the secrets of the" \
+              "release purpose alone, and the purpose is $PURPOSE" >&2
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Every install runs before the token step, per
+      # SITE-ROTATE-15. Unpinned code must never run beside the App
+      # credentials or a private key.
+      - name: Install the dependencies
+        run: |
+          make deps
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      # fuguweb comes from a release and never from a checkout, per
+      # SITE-ROTATE-14. Fugu holds the generic key directory parts,
+      # so both tarballs install here.
+      # Each version is pinned, per SITE-ROTATE-15. This job runs the
+      # installed code beside a private key, so a later release must
+      # not reach the key before a human reads the change. Bump each
+      # version deliberately.
+      - name: Install fuguweb
+        env:
+          FUGU_VERSION: v0.3.0
+          FUGUWEB_VERSION: v0.4.0
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes cpanminus mandoc lowdown
+          sudo cpanm --notest \
+            "https://github.com/FuguBSD/Fugu/releases/download/$FUGU_VERSION/Fugu.tar.gz"
+          sudo cpanm --notest \
+            "https://github.com/FuguBSD/FuguWeb/releases/download/$FUGUWEB_VERSION/App-FuguWeb.tar.gz"
+          fuguweb --help >/dev/null
+
+      # The token comes from the release engineering GitHub App. An
+      # installation token lives an hour, so a leak expires, and no
+      # expiry date can be missed.
+      #
+      # The call passes no repositories input. That input scopes a
+      # token to the named repositories, and this workflow needs the
+      # organization permissions of the installation for the two
+      # secrets and the variable.
+      - name: Mint an installation token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.RELENG_APP_ID }}
+          private-key: ${{ secrets.RELENG_PRIVATE_KEY }}
+          owner: FuguBSD
+
+      # SITE-ROTATE-5. A token with no organization permission fails
+      # at the secret write, and that message names neither the App
+      # nor the missing permission. The report therefore comes first,
+      # and it never prints the token.
+      - name: Report the reach of the token
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          gh api /installation/repositories --jq \
+            '"repositories: " + ([.repositories[].full_name] | join(", "))'
+
+      - name: Read the active slot
+        id: slot
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          # A variable that no rotation has written answers 404, and
+          # that is the state of a first mint. Every other failure is
+          # a fault, and a run that read it as "no slot" would sign
+          # with the wrong key.
+          if slot=$(gh api \
+            /orgs/FuguBSD/actions/variables/SIGNIFY_RELEASE_SLOT \
+            --jq .value 2>"$RUNNER_TEMP/slot.err"); then
+            :
+          elif grep -q 'HTTP 404' "$RUNNER_TEMP/slot.err"; then
+            slot=""
+          else
+            echo "rotate: cannot read the slot variable" >&2
+            cat "$RUNNER_TEMP/slot.err" >&2
+            exit 1
+          fi
+
+          case "$slot" in
+            A) echo "active=A" >> "$GITHUB_OUTPUT"
+               echo "idle=B"   >> "$GITHUB_OUTPUT" ;;
+            B) echo "active=B" >> "$GITHUB_OUTPUT"
+               echo "idle=A"   >> "$GITHUB_OUTPUT" ;;
+            *) echo "active="  >> "$GITHUB_OUTPUT"
+               echo "idle=A"   >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      # The secrets reach the step through the environment, and never
+      # through the script text, so no value can become part of a
+      # command. A slot that holds nothing writes an empty file, and
+      # the first mint of a purpose needs no signer.
+      #
+      # Both slots are written. A mint signs with the active key,
+      # which is the current one. A promote signs with the idle key,
+      # which is the next one that this run makes current.
+      - name: Write the working key files
+        env:
+          KEY_A: ${{ secrets.SIGNIFY_RELEASE_KEY_A }}
+          KEY_B: ${{ secrets.SIGNIFY_RELEASE_KEY_B }}
+          ACTIVE: ${{ steps.slot.outputs.active }}
+          IDLE: ${{ steps.slot.outputs.idle }}
+        run: |
+          work=$(mktemp -d)
+          echo "WORK=$work" >> "$GITHUB_ENV"
+          umask 077
+          chmod 700 "$work"
+          # signify(1) refuses a key file with no final newline, so
+          # a file that holds a key ends in one. A slot that holds
+          # nothing must leave an empty file: the steps below read
+          # the size of each file to tell a key from no key, and a
+          # lone newline would read as a key.
+          : > "$work/active.sec"
+          : > "$work/idle.sec"
+
+          case "$ACTIVE" in
+            A) active="$KEY_A" ;;
+            B) active="$KEY_B" ;;
+            *) active="" ;;
+          esac
+          case "$IDLE" in
+            A) idle="$KEY_A" ;;
+            B) idle="$KEY_B" ;;
+            *) idle="" ;;
+          esac
+
+          [ -n "$active" ] && printf '%s\n' "$active" > "$work/active.sec"
+          [ -n "$idle" ] && printf '%s\n' "$idle" > "$work/idle.sec"
+          true
+
+      # fuguweb rotate-key holds every trust rule, per FuguWeb
+      # WEB-ROTATE: it reads each status from the description, it
+      # refuses a second next key, it never signs with the key that
+      # it made, it verifies each signature against the published
+      # key, and a step that fails puts every file back.
+      #
+      # Exit code 6 means signify(1) is absent, and 1 means the
+      # rotation failed.
+      - name: Run the rotation step
+        id: rotate
+        env:
+          STEP: ${{ inputs.step }}
+          PURPOSE: ${{ inputs.purpose }}
+        run: |
+          if [ "$STEP" = mint ]; then
+            signer=""
+            [ -s "$WORK/active.sec" ] && signer="--signer $WORK/active.sec"
+            # shellcheck disable=SC2086
+            fuguweb rotate-key --step mint --purpose "$PURPOSE" \
+              --secret "$WORK/new.sec" $signer \
+              --org fugubsd --url https://www.fugubsd.org/keys \
+              >> "$GITHUB_OUTPUT"
+          else
+            if [ ! -s "$WORK/idle.sec" ]; then
+              echo "rotate: the idle slot holds no key to promote" >&2
+              exit 1
+            fi
+            fuguweb rotate-key --step promote --purpose "$PURPOSE" \
+              --secret "$WORK/idle.sec" >> "$GITHUB_OUTPUT"
+          fi
+
+      # SITE-ROTATE-16. The runner redacts the key from every later
+      # line of the log, whatever a command prints.
+      - name: Mask the new private key
+        if: inputs.step == 'mint'
+        run: |
+          while read -r line; do
+            [ -n "$line" ] && echo "::add-mask::$line"
+          done < "$WORK/new.sec"
+
+      # The key directory reaches main before any organization state
+      # moves, per SITE-ROTATE-18.
+      # SITE-ROTATE-16. The body comes from a file, so the key never
+      # reaches a command line.
+      # The list names each repository that releases a Perl
+      # distribution, and this one. FuguTTX releases none, so it
+      # holds no private key: it verifies with the published key,
+      # like every other consumer.
+      - name: Store the new private key
+        if: inputs.step == 'mint'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          IDLE: ${{ steps.slot.outputs.idle }}
+        run: |
+          gh secret set "SIGNIFY_RELEASE_KEY_$IDLE" \
+            --org FuguBSD \
+            --visibility selected \
+            --repos Website,Fugu,FuguVM,FuguWeb \
+            --body-file "$WORK/new.sec"
+
+      - name: Commit the key directory
+        env:
+          NAME: ${{ steps.rotate.outputs.name }}
+          STEP: ${{ inputs.step }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .fuguwebrc web/keys
+          git commit -m "feat(keys): $STEP $NAME"
+          git push origin HEAD:main
+
+      # A mint stores the new private key in the idle slot, and it
+      # leaves the variable alone. The current key stays current
+      # until the promote step, so a consumer that holds the old copy
+      # of deps/KEYS.txt can still verify a release.
+      #
+      # SITE-ROTATE-19. GitHub raises no workflow run from a push
+      # that GITHUB_TOKEN makes, so the publish never starts by
+      # itself. workflow_dispatch is the one event that the token can
+      # raise, so the default token dispatches it.
+      #
+      # The step watches no run, per SITE-ROTATE-24. A run
+      # identifier is a race: the publish holds a concurrency group,
+      # so GitHub can cancel a queued run. Another run then publishes
+      # the same commit. The step below reads the site itself.
+      - name: Publish the site
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run publish.yml --repo FuguBSD/Website --ref main
+
+      # SITE-ROTATE-20. The declaration below names the published URL
+      # and its digest, and scripts/deps fetches it in every
+      # consumer. A line whose URL answers 404 breaks make deps
+      # everywhere.
+      #
+      # The step compares the bytes of each file that the rotation
+      # changed. A promote writes no key file, so a check of the key
+      # alone would read the file of an earlier run. A cache can also
+      # answer 200 with stale bytes.
+      - name: Confirm the published site serves what this run wrote
+        env:
+          NAME: ${{ steps.rotate.outputs.name }}
+          STEP: ${{ inputs.step }}
+        run: |
+          files="SHA256 SHA256.sig"
+          [ "$STEP" = mint ] && files="$files $NAME"
+
+          stale="no read ran"
+          for _ in $(seq 1 40); do
+            stale=""
+            for file in $files; do
+              url="https://www.fugubsd.org/keys/$file"
+              code=$(curl -sS -H 'Cache-Control: no-cache' \
+                -o "$RUNNER_TEMP/served" -w '%{http_code}' "$url" || true)
+              if [ "$code" != 200 ]; then
+                stale="$file answers $code"
+                break
+              fi
+              if ! cmp -s "$RUNNER_TEMP/served" "web/keys/$file"; then
+                stale="$file answers 200 with other bytes"
+                break
+              fi
+            done
+
+            if [ -z "$stale" ]; then
+              echo "the site serves every file that this run wrote"
+              exit 0
+            fi
+
+            echo "$stale"
+            sleep 20
+          done
+
+          echo "rotate: the site never served what this run wrote:" \
+            "$stale" >&2
+          exit 1
+
+      # The variable moves last of all, per SITE-ROTATE-18. Every
+      # reader of the active slot reads it, so a run that moved it
+      # earlier and then failed would name a key that the site does
+      # not serve.
+      #
+      # The first mint of a purpose finds no active slot, so it also
+      # names the slot that it wrote. Every later mint leaves the
+      # variable for the promote step.
+      - name: Name the active slot
+        if: inputs.step == 'promote' || steps.slot.outputs.active == ''
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          IDLE: ${{ steps.slot.outputs.idle }}
+        run: |
+          # The new key sits in the idle slot in both cases: the first
+          # mint wrote it there, and a promote makes the key that a
+          # mint wrote there current.
+          gh variable set SIGNIFY_RELEASE_SLOT \
+            --org FuguBSD \
+            --visibility all \
+            --body "$IDLE"
+
+      # The digest is the trust anchor of the declaration, so it comes
+      # from the file that this run published.
+      #
+      # SITE-ROTATE-21. Tooling syncs the org pack into itself, so the
+      # pull request writes both copies of the file. One copy alone
+      # leaves the other stale and fails the drift gate.
+      #
+      # SITE-ROTATE-22. A mint appends, and that is the whole trust
+      # order: the current key leads the file, and the next key goes
+      # under it. A promote must lift its line to the top, and this
+      # workflow holds no such edit, because D-01 takes site content
+      # alone. The promote therefore stops here, and it says so.
+      - name: Declare the key in FuguBSD/Tooling
+        if: inputs.step == 'mint'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          NAME: ${{ steps.rotate.outputs.name }}
+          STEM: ${{ steps.rotate.outputs.stem }}
+          RUN: ${{ github.run_id }}
+        run: |
+          digest=$(sha256sum "web/keys/$NAME" | cut -d' ' -f1)
+          url="https://www.fugubsd.org/keys/$NAME"
+
+          gh repo clone FuguBSD/Tooling tooling -- --depth 1
+          cd tooling
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # The run id joins the branch name, so a second run of the
+          # same step opens its own pull request and fails at no push.
+          branch="keys/$STEM-mint-$RUN"
+          git checkout -b "$branch"
+
+          for keys in org/sync/deps/KEYS.txt deps/KEYS.txt; do
+            printf '%s %s %s\n' "$STEM" "$url" "$digest" >> "$keys"
+            git add "$keys"
+          done
+
+          git commit -m "feat(deps): declare the release key $STEM"
+          git push -u origin "$branch"
+
+          cat > "$RUNNER_TEMP/pr.md" <<BODY
+          The rotation workflow of FuguBSD/Website published
+          \`$url\` and recorded its digest here.
+
+          The URL serves the key already: the workflow read the site and
+          compared the bytes before it opened this pull request.
+
+          Both copies of the file carry the line, because Tooling syncs
+          the org pack into itself.
+
+          ---
+          _Generated by [Claude Code](https://claude.ai/code)_
+          BODY
+          sed -i 's/^          //' "$RUNNER_TEMP/pr.md"
+
+          gh pr create \
+            --title "feat(deps): declare the release key $STEM" \
+            --body-file "$RUNNER_TEMP/pr.md"
+
+      # A promote moves the trust, and the line of the new current key
+      # must lead deps/KEYS.txt. That edit is not here, per
+      # SITE-ROTATE-22, so the run stops and names the work.
+      - name: Refuse to declare a promote
+        if: inputs.step == 'promote'
+        env:
+          STEM: ${{ steps.rotate.outputs.stem }}
+        run: |
+          echo "rotate: the site now serves $STEM as the current key," \
+            "and the organization variable names its slot" >&2
+          echo "rotate: deps/KEYS.txt of FuguBSD/Tooling must carry" \
+            "$STEM at the top, above every retired key" >&2
+          echo "rotate: this workflow opens no such pull request, so a" \
+            "maintainer must order the file" >&2
+          exit 1
+
+      - name: Remove the working directory
+        if: always()
+        run: rm -rf "$WORK"

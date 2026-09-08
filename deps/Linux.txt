@@ -1,0 +1,7 @@
+# External dependencies of the website. scripts/deps installs each
+# line. fuguweb rotate-key signs the key manifest, so it needs
+# signify(1). The site build itself signs nothing.
+tool pkg signify-openbsd
+# The secret gate of make check runs gitleaks, so the tool environment
+# installs it before every other environment.
+tool bin gitleaks https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_{os}_{arch}.tar.gz gitleaks
