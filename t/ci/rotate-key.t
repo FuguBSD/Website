@@ -160,11 +160,13 @@ subtest 'the private key stays out of every log and command line' => sub {
 	ok( _at('Mask the new private key') < _at('Store the new private key'),
 		'and it runs before the key reaches a command' );
 
-	# SITE-ROTATE-16. The body of a secret comes from a file.
+	# SITE-ROTATE-16. The body of a secret comes from a file, and
+	# gh secret set takes it on standard input.
 	my $store = _step('Store the new private key');
 	ok( $store, 'the store step is there' ) or return;
-	like( $store, qr/--body-file/, 'the secret takes a file' );
-	unlike( $store, qr/--body\s/, 'and never a command line' );
+	like( $store, qr/^\s*<\s*"\$WORK\/new\.sec"/m,
+		'the secret comes in on standard input' );
+	unlike( $store, qr/--body/, 'and never on a command line' );
 };
 
 subtest 'the secret reaches every repository that needs it' => sub {

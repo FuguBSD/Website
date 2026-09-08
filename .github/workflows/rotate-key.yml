@@ -265,11 +265,14 @@ jobs:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           IDLE: ${{ steps.slot.outputs.idle }}
         run: |
+          # gh secret set has no file flag. It reads the value from
+          # standard input, and a redirect keeps the key off the
+          # command line, where the process table shows it.
           gh secret set "SIGNIFY_RELEASE_KEY_$IDLE" \
             --org FuguBSD \
             --visibility selected \
             --repos Website,Fugu,FuguVM,FuguWeb \
-            --body-file "$WORK/new.sec"
+            < "$WORK/new.sec"
 
       - name: Commit the key directory
         env:

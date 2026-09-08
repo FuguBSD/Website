@@ -77,7 +77,8 @@ takes site content alone, per D-01.
   runs the installed code beside a private key, so a later release must not
   reach that key before a human reads the change.
 - **SITE-ROTATE-16** — The workflow must mask the private key that a mint
-  writes, and must pass it to a secret by file and never on a command line.
+  writes. It must read the key from a file on standard input, because a command
+  line shows the key in the process table.
 - **SITE-ROTATE-17** — Each secret name must carry the purpose word. The
   `secrets` context cannot build a name from an input, so the workflow must name
   its secrets literally, and it must refuse a purpose that it cannot address. A
