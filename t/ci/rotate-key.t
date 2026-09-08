@@ -216,6 +216,25 @@ subtest 'the declaration writes both copies of the key file' => sub {
 	ok( $refuse, 'and a promote stops with a reason' );
 };
 
+subtest 'the declaration can push its branch' => sub {
+	my $declare = _step('Declare the key in FuguBSD/Tooling');
+	ok( $declare, 'the declare step is there' ) or return;
+
+	# SITE-ROTATE-26. gh repo clone leaves a remote that carries
+	# no credential, and the push then asks for a username.
+	like( $declare, qr/git config credential\.helper/,
+		'the clone gets a credential helper' );
+
+	# The helper must read the token when git runs it. A token
+	# that the shell expands here would reach the config file.
+	like( $declare, qr/'[^']*"password=\$GH_TOKEN"[^']*'/,
+		'and the helper reads the token from the environment' );
+
+	# The token must reach no command line and no remote URL.
+	unlike( $declare, qr/x-access-token:/,
+		'no remote URL carries the token' );
+};
+
 subtest 'the workflow serves one purpose, and it says so' => sub {
 
 	# SITE-ROTATE-17. The secrets context cannot build a name from

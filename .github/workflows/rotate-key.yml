@@ -404,6 +404,14 @@ jobs:
           git config user.email \
             "41898282+github-actions[bot]@users.noreply.github.com"
 
+          # gh repo clone leaves a remote that carries no credential,
+          # and the push below then asks for a username. This helper
+          # reads the token from the environment when git runs it, so
+          # the token reaches no command line and no file.
+          helper='!f() { echo username=x-access-token; '
+          helper="$helper"'echo "password=$GH_TOKEN"; }; f'
+          git config credential.helper "$helper"
+
           # The run id joins the branch name, so a second run of the
           # same step opens its own pull request and fails at no push.
           branch="keys/$STEM-mint-$RUN"

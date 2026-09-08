@@ -116,6 +116,11 @@ takes site content alone, per D-01.
   name the work that a maintainer does.
 - **SITE-ROTATE-25** — The branch of that pull request must carry the run
   identifier, so a second run of one step opens its own pull request.
+- **SITE-ROTATE-26** — The clone of FuguBSD/Tooling must get a git credential
+  helper, because `gh repo clone` leaves a remote that carries no credential.
+  The helper must read the token from the environment when git runs it. A token
+  that the shell expands earlier would reach the configuration file, and a token
+  in the remote URL would reach the command line.
 - **SITE-ROTATE-12** — A retired key file must stay published, so a release that
   it signed still verifies.
 - **SITE-ROTATE-13** — The workflow must remove every private key file that it
