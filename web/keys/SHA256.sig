@@ -1,0 +1,2 @@
+untrusted comment: verify with fugubsd-1-release.pub
+RWRKSCtmq6YKnooKzy1/WLn9SlkuJZqZ67fr5Gkyx6P2kWShftRdizOI5mCQfJuIDL8QBB7EHRMTLny76SWIN3LBBg8Qa0yXUwg=

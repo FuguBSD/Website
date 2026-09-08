@@ -16,3 +16,15 @@ page "404.html" {
 	body     = 404.body.html
 	unlinked = yes
 }
+
+# The published keys of the organization. The rotation
+# writes this directory.
+keys "keys" {
+	org = fugubsd
+	url = https://www.fugubsd.org/keys
+}
+
+key "fugubsd-1-release" {
+	status = current
+	since  = 2026-09-08
+}
