@@ -64,8 +64,6 @@ takes site content alone, per D-01.
   releases a Perl distribution, and to this repository. The shared release
   workflow runs in the caller, and this repository reads the active key to sign
   the manifest of a later step.
-- **SITE-ROTATE-3** — The key pair must come from `signify -G -n`, with no
-  passphrase. CI cannot answer a passphrase prompt.
 - **SITE-ROTATE-4** — The workflow must mint its token from the release
   engineering GitHub App, and must bind the `releng` environment that holds the
   App credentials.
@@ -74,8 +72,9 @@ takes site content alone, per D-01.
 - **SITE-ROTATE-14** — The workflow must call `fuguweb rotate-key` for each
   step. It must install `fuguweb` from a release, and never from a checkout.
 - **SITE-ROTATE-15** — Each install must run in its own step, before the step
-  that mints the token. Unpinned code must never run beside the App credentials
-  or a private key.
+  that mints the token, and must name the version that it installs. This job
+  runs the installed code beside a private key, so a later release must not
+  reach that key before a human reads the change.
 - **SITE-ROTATE-16** — The workflow must mask the private key that a mint
   writes, and must pass it to a secret by file and never on a command line.
 - **SITE-ROTATE-17** — Each secret name must carry the purpose word. The
@@ -83,22 +82,38 @@ takes site content alone, per D-01.
   its secrets literally, and it must refuse a purpose that it cannot address. A
   rotation of one purpose must never write the slot of another.
 - **SITE-ROTATE-9** — The promote step must move the variable to the other slot.
-  `fuguweb rotate-key` makes the `next` key current and retires the old one.
-- **SITE-ROTATE-18** — The workflow must write the organization secret and the
-  organization variable only after the key directory reaches `main`. A run that
-  wrote either one first would leave the organization naming a key that no
-  consumer can fetch.
+- **SITE-ROTATE-18** — The workflow must move the organization variable only
+  after the published site serves what the run wrote. The variable names the
+  active slot, so a run that moved it and then failed would name a key that the
+  site does not serve.
+- **SITE-ROTATE-23** — The workflow must write the private key into the idle
+  slot before it commits the key directory. No reader reaches the idle slot
+  until the variable names it, and a later write could publish a key whose
+  private half no slot holds.
 - **SITE-ROTATE-19** — The workflow must start the publish of the site itself. A
   push that `GITHUB_TOKEN` makes raises no workflow run, so the site would never
-  rebuild and the published URL would answer 404.
-- **SITE-ROTATE-20** — The workflow must confirm that the published URL serves
-  the key file, before it declares that key anywhere.
+  rebuild and the published URL would answer 404. `workflow_dispatch` is the one
+  event that the token can raise.
+- **SITE-ROTATE-24** — The workflow must watch no run of the publish. The
+  publish holds a concurrency group, so one run can cancel another and a run
+  identifier tells nothing. The site itself is the fact to read.
+- **SITE-ROTATE-20** — The workflow must confirm that the published site serves
+  every file that the run wrote, byte for byte, before it declares a key
+  anywhere. A promote writes no key file, and a cache can answer 200 with older
+  bytes.
 - **SITE-ROTATE-11** — Each step must open a pull request against
   FuguBSD/Tooling that declares the key, with the published URL and the sha256
   of the file. A rotation without it breaks `make deps` in each consumer.
 - **SITE-ROTATE-21** — That pull request must write `deps/KEYS.txt` and
   `org/sync/deps/KEYS.txt`. Tooling syncs the org pack into itself, so one copy
   alone leaves the other stale and fails the drift gate.
+- **SITE-ROTATE-22** — A mint must append its line, which is the whole trust
+  order: the current key leads the file, and the next key stands under it. A
+  promote must lift its line to the top, and this workflow must hold no such
+  edit, because D-01 takes site content alone. A promote must stop, and it must
+  name the work that a maintainer does.
+- **SITE-ROTATE-25** — The branch of that pull request must carry the run
+  identifier, so a second run of one step opens its own pull request.
 - **SITE-ROTATE-12** — A retired key file must stay published, so a release that
   it signed still verifies.
 - **SITE-ROTATE-13** — The workflow must remove every private key file that it
