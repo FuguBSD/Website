@@ -68,6 +68,11 @@ takes site content alone, per D-01.
 - **SITE-ROTATE-4** — The workflow must mint its token from the release
   engineering GitHub App, and must bind the `releng` environment that holds the
   App credentials.
+- **SITE-ROTATE-27** — The `releng` environment must hold a deployment-branch
+  rule that names `main` alone. `workflow_dispatch` runs the workflow file of
+  the chosen ref, so a person with write access can otherwise reach the App
+  credentials through a branch of their own. The rule is a repository setting,
+  and no file of this repository can carry it. The operator sets it.
 - **SITE-ROTATE-5** — The workflow must report the repositories that the token
   reaches, before it writes a secret, and must never print the token.
 - **SITE-ROTATE-14** — The workflow must call `fuguweb rotate-key` for each
