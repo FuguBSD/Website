@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
+        # The gitleaks gate scans the full git history, so the
+        # checkout stays at fetch-depth 0 (WFL-GITLEAKS-2).
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -19,8 +21,6 @@ jobs:
       - name: Setup bun
         uses: FuguBSD/Tooling/actions/setup-bun@main
 
-      # The gitleaks gate scans the full git history, so the
-      # checkout above stays at fetch-depth 0 (WFL-GITLEAKS-2).
       - name: Install dependencies
         run: |
           make deps

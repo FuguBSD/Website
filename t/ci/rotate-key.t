@@ -171,15 +171,22 @@ subtest 'the secret reaches every repository that needs it' => sub {
 	my $store = _step('Store the new private key');
 	ok( $store, 'the store step is there' ) or return;
 
+	my ($repos) = $store =~ /--repos (\S+)/;
+	ok( $repos, 'the step names the repositories' ) or return;
+	my %reads = map { $_ => 1 } split /,/, $repos;
+
 	# SITE-ROTATE-2. This repository runs the workflow, so a list
 	# that named the release callers alone would leave a later run
 	# reading its own key secret as empty.
-	like( $store, qr/--repos \S*\bWebsite\b/,
-		'this repository reads the secret' );
-	like( $store, qr/--repos \S*\bFugu\b/, 'and Fugu' );
-	like( $store, qr/--repos \S*\bFuguWeb\b/,  'and FuguWeb' );
-	like( $store, qr/--repos \S*\bFuguVM\b/,   'and FuguVM' );
-	like( $store, qr/--repos \S*\bFuguTTX\b/,  'and FuguTTX' );
+	ok( $reads{Website}, 'this repository reads the secret' );
+
+	# Each repository that releases a Perl distribution signs with
+	# the key, so each one reads it.
+	ok( $reads{$_}, "and $_" ) for qw(Fugu FuguVM FuguWeb);
+
+	# A repository that releases nothing must hold no private key.
+	# It verifies with the published one, as every consumer does.
+	ok( !$reads{FuguTTX}, 'and FuguTTX, which releases none, does not' );
 };
 
 subtest 'the declaration writes both copies of the key file' => sub {

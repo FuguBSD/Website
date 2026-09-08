@@ -255,6 +255,10 @@ jobs:
       # moves, per SITE-ROTATE-18.
       # SITE-ROTATE-16. The body comes from a file, so the key never
       # reaches a command line.
+      # The list names each repository that releases a Perl
+      # distribution, and this one. FuguTTX releases none, so it
+      # holds no private key: it verifies with the published key,
+      # like every other consumer.
       - name: Store the new private key
         if: inputs.step == 'mint'
         env:
@@ -264,7 +268,7 @@ jobs:
           gh secret set "SIGNIFY_RELEASE_KEY_$IDLE" \
             --org FuguBSD \
             --visibility selected \
-            --repos Website,Fugu,FuguVM,FuguWeb,FuguTTX \
+            --repos Website,Fugu,FuguVM,FuguWeb \
             --body-file "$WORK/new.sec"
 
       - name: Commit the key directory
@@ -289,10 +293,10 @@ jobs:
       # itself. workflow_dispatch is the one event that the token can
       # raise, so the default token dispatches it.
       #
-      # The step watches no run. A run id is a race: the publish
-      # holds a concurrency group, so GitHub can cancel a queued run
-      # and another run then publishes the same commit. The step
-      # below reads the site itself, which is the fact that matters.
+      # The step watches no run, per SITE-ROTATE-24. A run
+      # identifier is a race: the publish holds a concurrency group,
+      # so GitHub can cancel a queued run. Another run then publishes
+      # the same commit. The step below reads the site itself.
       - name: Publish the site
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -306,7 +310,7 @@ jobs:
       #
       # The step compares the bytes of each file that the rotation
       # changed. A promote writes no key file, so a check of the key
-      # alone would read the file of an earlier run, and a cache can
+      # alone would read the file of an earlier run. A cache can also
       # answer 200 with stale bytes.
       - name: Confirm the published site serves what this run wrote
         env:

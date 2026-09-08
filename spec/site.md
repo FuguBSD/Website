@@ -63,7 +63,8 @@ takes site content alone, per D-01.
 - **SITE-ROTATE-2** — Each secret must be visible to every repository that
   releases a Perl distribution, and to this repository. The shared release
   workflow runs in the caller, and this repository reads the active key to sign
-  the manifest of a later step.
+  a manifest. A repository that releases nothing must hold no private key: it
+  verifies with the published one.
 - **SITE-ROTATE-4** — The workflow must mint its token from the release
   engineering GitHub App, and must bind the `releng` environment that holds the
   App credentials.
