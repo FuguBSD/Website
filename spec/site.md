@@ -70,7 +70,7 @@ takes site content alone, per D-01.
   App credentials.
 - **SITE-ROTATE-27** — The `releng` environment must hold a deployment-branch
   rule that names `main` alone. `workflow_dispatch` runs the workflow file of
-  the chosen ref, so a person with write access can otherwise reach the App
+  the chosen ref. A person with write access can otherwise reach the App
   credentials through a branch of their own. The rule is a repository setting,
   and no file of this repository can carry it. The operator sets it.
 - **SITE-ROTATE-5** — The workflow must report the repositories that the token
@@ -80,10 +80,10 @@ takes site content alone, per D-01.
 - **SITE-ROTATE-15** — Each install must run in its own step, before the step
   that mints the token. The deps manifest must name the version that it
   installs, and the workflow must run no install of its own. This job runs the
-  installed code beside a private key, so a later release must not reach that
-  key before a human reads the change.
+  installed code beside a private key. A later release must not reach that key
+  before a human reads the change.
 - **SITE-ROTATE-28** — Each `dist` entry of the manifest must name a versioned
-  release URL, so `scripts/deps` verifies the signed manifest of that release
+  release URL. `scripts/deps` then verifies the signed manifest of that release
   with the declared key. A plain `cpanm` of a URL reads the tarball with no
   check at all.
 - **SITE-ROTATE-16** — The workflow must mask the private key that a mint
@@ -91,17 +91,17 @@ takes site content alone, per D-01.
   line shows the key in the process table.
 - **SITE-ROTATE-17** — Each secret name must carry the purpose word. The
   `secrets` context cannot build a name from an input, so the workflow must name
-  its secrets literally, and it must refuse a purpose that it cannot address. A
+  its secrets literally. It must refuse a purpose that it cannot address. A
   rotation of one purpose must never write the slot of another.
 - **SITE-ROTATE-9** — The promote step must move the variable to the other slot.
 - **SITE-ROTATE-18** — The workflow must move the organization variable only
   after the published site serves what the run wrote. The variable names the
-  active slot, so a run that moved it and then failed would name a key that the
+  active slot. A run that moved it and then failed would name a key that the
   site does not serve.
 - **SITE-ROTATE-23** — The workflow must write the private key into the idle
   slot before it commits the key directory. No reader reaches the idle slot
-  until the variable names it, and a later write could publish a key whose
-  private half no slot holds.
+  until the variable names it. A later write could publish a key whose private
+  half no slot holds.
 - **SITE-ROTATE-19** — The workflow must start the publish of the site itself. A
   push that `GITHUB_TOKEN` makes raises no workflow run, so the site would never
   rebuild and the published URL would answer 404. `workflow_dispatch` is the one
@@ -110,9 +110,9 @@ takes site content alone, per D-01.
   publish holds a concurrency group, so one run can cancel another and a run
   identifier tells nothing. The site itself is the fact to read.
 - **SITE-ROTATE-20** — The workflow must confirm that the published site serves
-  every file that the run wrote, byte for byte, before it declares a key
-  anywhere. A promote writes no key file, and a cache can answer 200 with older
-  bytes.
+  every file that the run wrote, byte for byte. It must do this before it
+  declares a key anywhere. A promote writes no key file, and a cache can answer
+  200 with older bytes.
 - **SITE-ROTATE-11** — Each step must open a pull request against
   FuguBSD/Tooling that declares the key, with the published URL and the sha256
   of the file. A rotation without it breaks `make deps` in each consumer.
@@ -120,7 +120,7 @@ takes site content alone, per D-01.
   `org/sync/deps/KEYS.txt`. Tooling syncs the org pack into itself, so one copy
   alone leaves the other stale and fails the drift gate.
 - **SITE-ROTATE-22** — A mint must append its line, which is the whole trust
-  order: the current key leads the file, and the next key stands under it. A
+  order. The current key leads the file, and the next key stands under it. A
   promote must lift its line to the top, and this workflow must hold no such
   edit, because D-01 takes site content alone. A promote must stop, and it must
   name the work that a maintainer does.

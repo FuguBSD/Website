@@ -17,8 +17,8 @@ contract, the ID conventions, and the document tables.
   `Implements: SITE-CONTENT without SITE-CONTENT-2`.
 - A plan must cite each unit that it touches but defers, for example
   `Defers: SITE-BUILD`.
-- The change that implements a unit, or a part of a unit, must set the state of
-  the unit in [STATUS.md](STATUS.md) in the same change.
+- The change that implements a unit, or a part of one, must set the unit state
+  in [STATUS.md](STATUS.md) in the same change.
 
 <a id="conventions"></a>
 
