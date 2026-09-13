@@ -55,7 +55,7 @@ human handles the private key at any point.
 The workflow holds the credential, the organization state and the publication.
 It holds no rotation logic: `fuguweb rotate-key` writes the key directory, and
 FuguWeb WEB-ROTATE states every trust rule of that command. This repository
-takes site content alone, per D-01.
+holds no application code, per D-01.
 
 - **SITE-ROTATE-1** — Two organization secrets `SIGNIFY_RELEASE_KEY_A` and
   `SIGNIFY_RELEASE_KEY_B` must hold the private keys, and the organization
@@ -121,9 +121,9 @@ takes site content alone, per D-01.
   alone leaves the other stale and fails the drift gate.
 - **SITE-ROTATE-22** — A mint must append its line, which is the whole trust
   order. The current key leads the file, and the next key stands under it. A
-  promote must lift its line to the top, and this workflow must hold no such
-  edit, because D-01 takes site content alone. A promote must stop, and it must
-  name the work that a maintainer does.
+  promote must lift its line to the top. This workflow must hold no such edit,
+  because this repository holds no application code, per D-01. A promote must
+  stop, and it must name the work that a maintainer does.
 - **SITE-ROTATE-25** — The branch of that pull request must carry the run
   identifier, so a second run of one step opens its own pull request.
 - **SITE-ROTATE-26** — The clone of FuguBSD/Tooling must get a git credential
@@ -135,3 +135,28 @@ takes site content alone, per D-01.
   it signed still verifies.
 - **SITE-ROTATE-13** — The workflow must remove every private key file that it
   wrote, whatever the outcome of the run.
+
+<a id="site-get"></a>
+
+## The install address
+
+The organization serves one stable install address for FuguBench. Each release
+of FuguBench holds the install script, and the release URL carries the version.
+This address carries no version, so a reader and a document can name it.
+
+- **SITE-GET-1** — The site must serve `https://www.fugubsd.org/get`. The source
+  is the file `web/get`. FuguWeb copies each plain file of the source directory
+  to the output as it stands, so the file needs no entry in `.fuguwebrc`.
+- **SITE-GET-2** — `web/get` must be a POSIX shell stub. It must fetch
+  `https://github.com/FuguBSD/FuguBench/releases/latest/download/install.sh`
+  over HTTPS, and it must run that script. It must do that, and nothing else.
+- **SITE-GET-3** — The stub must hold no version and no digest. A static site
+  cannot follow a moving release, and the stub reads the latest release at the
+  moment of the fetch. No release of FuguBench needs a change of this
+  repository.
+- **SITE-GET-4** — The stub trusts HTTPS to GitHub for that one fetch. FuguBench
+  D-05 sets that trust root, and the script that the stub runs verifies each
+  later download against the release key.
+- **SITE-GET-5** — The published command is
+  `curl -fsSL https://fugubsd.org/get | sh`. The apex redirects to
+  `www.fugubsd.org`, and the redirect keeps the path.
