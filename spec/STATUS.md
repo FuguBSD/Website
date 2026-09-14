@@ -20,12 +20,12 @@ phase applies.
 
 ## Units
 
-| Unit                                 | State   | Done by | Note                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ------------------------------------ | ------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [SITE-CONTENT](site.md#site-content) | done    | —       | [index.body.html](../web/index.body.html)                                                                                                                                                                                                                                                                                                                                                                            |
-| [SITE-BUILD](site.md#site-build)     | done    | —       | [.fuguwebrc](../.fuguwebrc), [publish.yml](../.github/workflows/publish.yml)                                                                                                                                                                                                                                                                                                                                         |
-| [SITE-KEYS](site.md#site-keys)       | done    | —       | [.fuguwebrc](../.fuguwebrc), [web/keys](../web/keys). The first mint wrote the `keys` block, the `key` block, `fugubsd-1-release.pub`, `SHA256` and `SHA256.sig` in one commit.                                                                                                                                                                                                                                      |
-| [SITE-ROTATE](site.md#site-rotate)   | partial | —       | [rotate-key.yml](../.github/workflows/rotate-key.yml), [rotate-key.t](../t/ci/rotate-key.t). Partly: SITE-ROTATE-1, because the first mint filled slot A and the variable, and slot B stays empty until the next mint. Absent: SITE-ROTATE-22, the order that a promote needs. Absent: SITE-ROTATE-27, the deployment-branch rule of the `releng` environment, which is a repository setting that the operator sets. |
+| Unit                                 | State   | Done by | Note                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------ | ------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [SITE-CONTENT](site.md#site-content) | done    | —       | [index.body.html](../web/index.body.html)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| [SITE-BUILD](site.md#site-build)     | done    | —       | [.fuguwebrc](../.fuguwebrc), [publish.yml](../.github/workflows/publish.yml)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| [SITE-KEYS](site.md#site-keys)       | open    | —       | No key directory is published, and `.fuguwebrc` holds no `keys` block. A bootstrap mint writes the block, the first key and the manifest of one directory in one commit. Absent: SITE-KEYS-6, because [rotate-key.yml](../.github/workflows/rotate-key.yml) passes the org word `fugubsd` for each directory, and FuguWeb WEB-KEYS-2 refuses a second block that names one word.                                                                                                                                                                                                                                                                                                                   |
+| [SITE-ROTATE](site.md#site-rotate)   | partial | —       | [rotate-key.yml](../.github/workflows/rotate-key.yml), [rotate-key.t](../t/ci/rotate-key.t). The caller pins the reusable workflow of FuguWeb to the commit of the v0.6.0 tag. Absent: SITE-ROTATE-1, because the first mint of a purpose writes its two secrets and its variable. Absent: SITE-ROTATE-4, because the operator writes the App credentials of each environment. Absent: SITE-ROTATE-11, SITE-ROTATE-21, SITE-ROTATE-22, SITE-ROTATE-25 and SITE-ROTATE-26, the pull request that declares a key in FuguBSD/Tooling, which no job of the caller opens. Absent: SITE-ROTATE-27, the deployment-branch rule of each environment, which is a repository setting that the operator sets. |
 
 ## Update protocol
 
@@ -44,10 +44,21 @@ The drift gate maps each document to the code that implements it.
 
 ## Retired IDs
 
-| ID             | Where the requirement went                    |
-| -------------- | --------------------------------------------- |
-| SITE-ROTATE-3  | FuguWeb WEB-ROTATE-2, the key pair            |
-| SITE-ROTATE-6  | FuguWeb WEB-ROTATE-2, the serial              |
-| SITE-ROTATE-7  | FuguWeb WEB-ROTATE-6, the signer of a mint    |
-| SITE-ROTATE-8  | FuguWeb WEB-ROTATE-3 and -6, the first mint   |
-| SITE-ROTATE-10 | FuguWeb WEB-ROTATE-6, the signer of a promote |
+| ID             | Where the requirement went                            |
+| -------------- | ----------------------------------------------------- |
+| SITE-ROTATE-3  | FuguWeb WEB-ROTATE-2, the key pair                    |
+| SITE-ROTATE-5  | FuguWeb WEB-ACTIONS, the reach of the token           |
+| SITE-ROTATE-6  | FuguWeb WEB-ROTATE-2, the serial                      |
+| SITE-ROTATE-7  | FuguWeb WEB-ROTATE-6, the signer of a mint            |
+| SITE-ROTATE-8  | FuguWeb WEB-ROTATE-3 and -6, the first mint           |
+| SITE-ROTATE-9  | FuguWeb WEB-ACTIONS-7, the move of the variable       |
+| SITE-ROTATE-10 | FuguWeb WEB-ROTATE-6, the signer of a promote         |
+| SITE-ROTATE-12 | FuguWeb WEB-TRUST-5, the retention of a retired key   |
+| SITE-ROTATE-13 | FuguWeb WEB-ACTIONS-12, the removal of each key file  |
+| SITE-ROTATE-16 | FuguWeb WEB-ACTIONS-7, the mask of a new key          |
+| SITE-ROTATE-17 | FuguWeb WEB-ACTIONS-4, the secret name of an input    |
+| SITE-ROTATE-18 | FuguWeb WEB-ACTIONS-7, the order of the writes        |
+| SITE-ROTATE-19 | FuguWeb WEB-ACTIONS-8, the start of the publish       |
+| SITE-ROTATE-20 | FuguWeb WEB-ACTIONS-7, the read of the published site |
+| SITE-ROTATE-23 | FuguWeb WEB-ACTIONS-7, the store before the commit    |
+| SITE-ROTATE-24 | FuguWeb WEB-ACTIONS-8, the run that no step watches   |
