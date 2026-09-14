@@ -257,9 +257,9 @@ jobs:
       # SITE-ROTATE-16. The body comes from a file, so the key never
       # reaches a command line.
       # The list names each repository that releases a Perl
-      # distribution, and this one. FuguTTX releases none, so it
-      # holds no private key: it verifies with the published key,
-      # like every other consumer.
+      # distribution, and this one (SITE-ROTATE-2). FuguTTX releases
+      # none, so it holds no private key: it verifies with the
+      # published key, like every other consumer.
       - name: Store the new private key
         if: inputs.step == 'mint'
         env:
@@ -272,7 +272,7 @@ jobs:
           gh secret set "SIGNIFY_RELEASE_KEY_$IDLE" \
             --org FuguBSD \
             --visibility selected \
-            --repos Website,Fugu,FuguVM,FuguWeb \
+            --repos Website,Fugu,FuguBench,FuguVM,FuguWeb \
             < "$WORK/new.sec"
 
       - name: Commit the key directory
