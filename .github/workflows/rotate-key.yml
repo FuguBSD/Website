@@ -18,9 +18,14 @@ name: Rotate a key
 #   directory     releng                          admin
 #   tree path     web/releng                      web/admin
 #   environment   releng                          admin
+#   org word      fugureleng                      fuguadmin
 #   prefix        RELENG                          ADMIN
 #   published at  https://www.fugubsd.org/releng  https://www.fugubsd.org/admin
 #   visibility    Website,Fugu,FuguBench,FuguVM,FuguWeb     Website
+#
+# The org word leads every key name of its directory, for example
+# fugureleng-1-release.pub. FuguWeb WEB-KEYS-2 refuses two key blocks
+# that name one org word, so each directory takes a word of its own.
 #
 # The prefix names the two secrets and the variable of each purpose:
 # <PREFIX>_<PURPOSE>_KEY_A, <PREFIX>_<PURPOSE>_KEY_B, and the
@@ -32,6 +37,12 @@ name: Rotate a key
 # A release key signs the distribution of four repositories, and an
 # admin key serves this site alone. The visibility list says so, and
 # it gives each private key to the repositories that read it.
+#
+# A root step binds each subordinate key of its directory again, per
+# FuguWeb WEB-TRUST-7. The subordinate purposes input names those
+# keys, and an empty value binds none. A first root mint of an empty
+# directory therefore names none, and a later root promote names each
+# purpose that its directory holds.
 on:
   workflow_dispatch:
     inputs:
@@ -67,6 +78,11 @@ on:
         required: false
         default: false
         type: boolean
+      subordinate_purposes:
+        description: "The subordinate purposes, separated by spaces"
+        required: false
+        default: ""
+        type: string
       email:
         description: "The address of an OpenPGP mint"
         required: false
@@ -115,17 +131,18 @@ jobs:
       purpose: ${{ inputs.purpose }}
       type: ${{ inputs.type }}
       bootstrap: ${{ inputs.bootstrap }}
+      subordinate_purposes: ${{ inputs.subordinate_purposes }}
       email: ${{ inputs.email }}
       expires: ${{ inputs.expires }}
       file: ${{ inputs.file }}
-      org: fugubsd
       owner: FuguBSD
       publish_workflow: publish.yml
       # The directory decides each value below.
       directory: web/${{ inputs.directory }}
       environment: ${{ inputs.directory }}
       url: https://www.fugubsd.org/${{ inputs.directory }}
+      org: ${{ inputs.directory == 'releng' && 'fugureleng' || 'fuguadmin' }}
       secret_prefix: ${{ inputs.directory == 'releng' && 'RELENG' || 'ADMIN' }}
       visibility:
-        ${{ inputs.directory == 'releng' && 'Website,Fugu,FuguBench,FuguVM,FuguWeb' ||
-        'Website' }}
+        ${{ inputs.directory == 'releng' &&
+        'Website,Fugu,FuguBench,FuguVM,FuguWeb' || 'Website' }}

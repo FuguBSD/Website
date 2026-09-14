@@ -34,6 +34,14 @@ close $fh;
 # The reusable workflow that holds every step of a key rotation.
 use constant CALLEE => 'FuguBSD/FuguWeb/.github/workflows/keys-rotate.yml';
 
+# The dispatch inputs of the caller, per SITE-ROTATE-14. With no
+# subordinate purposes input, a root promote binds no subordinate
+# key, and the callee reports nothing.
+my @DISPATCH = qw(
+    step purpose type directory bootstrap subordinate_purposes email
+    expires file
+);
+
 # The inputs that the callee declares as required. A call that omits
 # one of them fails at the start of the run, with no key written.
 my @REQUIRED = qw(
@@ -41,16 +49,19 @@ my @REQUIRED = qw(
     publish_workflow
 );
 
-# Each value that the directory decides, for each directory. The
-# secret prefix names the two key secrets, the variable and the App
-# of the environment. The visibility list names each repository that
-# reads the private key: a release key signs the distribution of four
-# repositories, and an admin key serves this site alone.
+# Each value that the directory decides, for each directory. The org
+# word leads every key name of the directory, and FuguWeb WEB-KEYS-2
+# refuses two blocks that name one word. The secret prefix names the
+# two key secrets, the variable and the App of the environment. The
+# visibility list names each repository that reads the private key: a
+# release key signs the distribution of four repositories, and an
+# admin key serves this site alone.
 my %DERIVED = (
 	releng => {
 		directory     => 'web/releng',
 		environment   => 'releng',
 		url           => 'https://www.fugubsd.org/releng',
+		org           => 'fugureleng',
 		secret_prefix => 'RELENG',
 		visibility    => 'Website,Fugu,FuguBench,FuguVM,FuguWeb',
 	},
@@ -58,6 +69,7 @@ my %DERIVED = (
 		directory     => 'web/admin',
 		environment   => 'admin',
 		url           => 'https://www.fugubsd.org/admin',
+		org           => 'fuguadmin',
 		secret_prefix => 'ADMIN',
 		visibility    => 'Website',
 	},
@@ -162,8 +174,8 @@ subtest 'the caller passes every input that the callee requires' => sub {
 	}
 
 	# The callee holds no organization name and no domain, per
-	# FuguWeb WEB-ACTIONS-9, so each one stands here.
-	is( $WITH{org},   'fugubsd', 'the org word is fugubsd' );
+	# FuguWeb WEB-ACTIONS-9, so each one stands here. The org word
+	# belongs to one directory, so the subtest below reads it.
 	is( $WITH{owner}, 'FuguBSD', 'the owner is FuguBSD' );
 	is( $WITH{publish_workflow},
 		'publish.yml', 'and the callee starts publish.yml' );
@@ -175,6 +187,9 @@ subtest 'every dispatch input reaches the call' => sub {
 
 	my @names = $inputs =~ /^      (\w+):$/mg;
 	ok( scalar @names, 'and the test reads each name' ) or return;
+
+	is( join( q{ }, sort @names ), join( q{ }, sort @DISPATCH ),
+		'the dispatch declares each input of SITE-ROTATE-14' );
 
 	my $call = join "\n", map { "$_: $WITH{$_}" } sort keys %WITH;
 	for my $name (@names) {
@@ -270,6 +285,22 @@ subtest 'each install names the version that it installs' => sub {
 	like( join( q{ }, @dists ), qr{/FuguBSD/Fugu/}, 'Fugu is one of them' );
 	like( join( q{ }, @dists ), qr{/FuguBSD/FuguWeb/},
 		'and FuguWeb is the other' );
+};
+
+subtest 'the manifest installs the command of each signer' => sub {
+
+	# SITE-ROTATE-31. Fugu::Signify runs signify(1) for each
+	# private key operation, and Fugu::OpenPGP drives gpg(1) with
+	# no other engine. A step that finds no command writes no key.
+	for my $os (qw(Darwin Linux)) {
+		my $manifest = _slurp("$RealBin/../../deps/$os.txt") // q{};
+		ok( length $manifest, "the $os manifest is there" ) or next;
+
+		like( $manifest, qr/^\s*tool\s+pkg\s+signify\S*$/m,
+			"$os installs signify" );
+		like( $manifest, qr/^\s*runtime\s+pkg\s+gnupg$/m,
+			"$os installs gnupg" );
+	}
 };
 
 done_testing();

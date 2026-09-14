@@ -52,8 +52,9 @@ WEB-KEYS, and this site holds the description and the key files.
   whole load. A bootstrap mint therefore writes the block, the first key and the
   manifest together.
 - **SITE-KEYS-6** — Each `keys` block must take an `org` word of its own. The
-  word leads every key name of the block, and FuguWeb WEB-KEYS-2 refuses two
-  blocks that name one word.
+  word is `fugureleng` for the `releng` directory, and `fuguadmin` for the
+  `admin` directory. The word leads every key name of the block, and FuguWeb
+  WEB-KEYS-2 refuses two blocks that name one word.
 
 <a id="site-rotate"></a>
 
@@ -88,13 +89,15 @@ repository takes site content alone, per D-01.
 - **SITE-ROTATE-14** — The workflow must call the reusable workflow of FuguWeb,
   and must hold no step of its own. It must pin the callee to a commit, because
   the callee runs beside a private key. Its dispatch must take the step, the
-  purpose, the type, the directory and the bootstrap flag. It must also take the
-  address and the expiry of an OpenPGP mint, and the file of an import.
+  purpose, the type, the directory, the bootstrap flag and the subordinate
+  purposes. It must also take the address and the expiry of an OpenPGP mint, and
+  the file of an import. A root step binds each subordinate key again, per
+  FuguWeb WEB-TRUST-7, and an empty value binds none.
 - **SITE-ROTATE-29** — The directory must be a choice input. The workflow must
   derive each value that the directory decides. Those values are the path in
-  this tree, the environment, the secret prefix, the published prefix and the
-  visibility list. A run must never pair one directory with the secrets of
-  another.
+  this tree, the environment, the org word, the secret prefix, the published
+  prefix and the visibility list. A run must never pair one directory with the
+  secrets of another.
 - **SITE-ROTATE-30** — The caller must hold `permissions`, `concurrency` and
   `secrets: inherit`, per FuguWeb WEB-ACTIONS-14. The permissions must grant
   `contents: write` for the commit of the key directory, and `actions: write`
@@ -108,6 +111,10 @@ repository takes site content alone, per D-01.
   release URL. `scripts/deps` then verifies the signed manifest of that release
   with the declared key. A plain `cpanm` of a URL reads the tarball with no
   check at all.
+- **SITE-ROTATE-31** — The deps manifest must install the command of each signer
+  that a key step runs. `signify(1)` makes a signify key and signs with it, and
+  `gpg(1)` makes an OpenPGP key and signs with it. Perl holds no private key
+  operation, so a step that finds no command writes no key.
 - **SITE-ROTATE-11** — Each step must open a pull request against
   FuguBSD/Tooling that declares the key, with the published URL and the sha256
   of the file. A rotation without it breaks `make deps` in each consumer. The

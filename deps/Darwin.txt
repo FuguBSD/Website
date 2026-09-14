@@ -16,3 +16,7 @@ runtime dist https://github.com/FuguBSD/Fugu/releases/download/v0.5.0/Fugu.tar.g
 runtime dist https://github.com/FuguBSD/FuguWeb/releases/download/v0.6.0/App-FuguWeb.tar.gz
 runtime pkg mandoc
 runtime pkg lowdown
+
+# Fugu::OpenPGP drives gpg(1), and it holds no other engine. An
+# OpenPGP mint of a key directory therefore needs the package.
+runtime pkg gnupg
