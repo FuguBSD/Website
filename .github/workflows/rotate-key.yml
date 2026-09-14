@@ -21,7 +21,7 @@ name: Rotate a key
 #   org word      fugureleng                      fuguadmin
 #   prefix        RELENG                          ADMIN
 #   published at  https://www.fugubsd.org/releng  https://www.fugubsd.org/admin
-#   visibility    Website,Fugu,FuguBench,FuguVM,FuguWeb     Website
+#   visibility    Website,Fugu,FuguBench,FuguSeed,FuguVM,FuguWeb     Website
 #
 # The org word leads every key name of its directory, for example
 # fugureleng-1-release.pub. FuguWeb WEB-KEYS-2 refuses two key blocks
@@ -152,4 +152,4 @@ jobs:
       secret_prefix: ${{ inputs.directory == 'releng' && 'RELENG' || 'ADMIN' }}
       visibility:
         ${{ inputs.directory == 'releng' &&
-        'Website,Fugu,FuguBench,FuguVM,FuguWeb' || 'Website' }}
+        'Website,Fugu,FuguBench,FuguSeed,FuguVM,FuguWeb' || 'Website' }}

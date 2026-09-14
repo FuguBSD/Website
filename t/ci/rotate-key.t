@@ -63,7 +63,7 @@ my %DERIVED = (
 		url           => 'https://www.fugubsd.org/releng',
 		org           => 'fugureleng',
 		secret_prefix => 'RELENG',
-		visibility    => 'Website,Fugu,FuguBench,FuguVM,FuguWeb',
+		visibility    => 'Website,Fugu,FuguBench,FuguSeed,FuguVM,FuguWeb',
 	},
 	admin => {
 		directory     => 'web/admin',
