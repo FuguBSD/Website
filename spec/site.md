@@ -55,6 +55,10 @@ WEB-KEYS, and this site holds the description and the key files.
   word is `fugureleng` for the `releng` directory, and `fuguadmin` for the
   `admin` directory. The word leads every key name of the block, and FuguWeb
   WEB-KEYS-2 refuses two blocks that name one word.
+- **SITE-KEYS-7** — A key file that a directory holds must stay published, a
+  retired key file included. A consumer that pins an old key verifies a release
+  that the key signed. A step of the rotation workflow removes a binding file
+  alone, per FuguWeb WEB-TRUST-5 and WEB-TRUST-7.
 
 <a id="site-rotate"></a>
 
@@ -79,8 +83,13 @@ repository takes site content alone, per D-01.
   releases nothing must hold no private key: it verifies with the published one.
 - **SITE-ROTATE-4** — Each directory must take an environment of its own,
   `releng` or `admin`. The environment must hold the credentials of a GitHub
-  App, `<PREFIX>_APP_ID` and `<PREFIX>_APP_PRIVATE_KEY`. The callee binds the
-  environment from an input, and it mints its token from that App.
+  App, `<PREFIX>_APP_ID` and `<PREFIX>_APP_PRIVATE_KEY`. The operator writes
+  each one, because no file of this repository can carry a secret. The callee
+  binds the environment from an input, and it mints its token from that App.
+- **SITE-ROTATE-33** — A run must report the repositories that its token
+  reaches, before it writes a secret, and must never print the token. A token
+  without the organization permission fails at the write of a secret, and that
+  message names neither the App nor the permission.
 - **SITE-ROTATE-27** — Each environment must hold a deployment-branch rule that
   names `main` alone. `workflow_dispatch` runs the workflow file of the chosen
   ref. A person with write access can otherwise reach the App credentials
@@ -90,9 +99,10 @@ repository takes site content alone, per D-01.
   and must hold no step of its own. It must pin the callee to a commit, because
   the callee runs beside a private key. Its dispatch must take the step, the
   purpose, the type, the directory, the bootstrap flag and the subordinate
-  purposes. It must also take the address and the expiry of an OpenPGP mint, and
-  the file of an import. A root step binds each subordinate key again, per
-  FuguWeb WEB-TRUST-7, and an empty value binds none.
+  purposes. The purpose must default to `root`, because each directory takes its
+  root key first, per SITE-KEYS-4. It must also take the address and the expiry
+  of an OpenPGP mint, and the file of an import. A root step binds each
+  subordinate key again, per FuguWeb WEB-TRUST-7, and an empty value binds none.
 - **SITE-ROTATE-29** — The directory must be a choice input. The workflow must
   derive each value that the directory decides. Those values are the path in
   this tree, the environment, the org word, the secret prefix, the published
@@ -108,30 +118,28 @@ repository takes site content alone, per D-01.
   private key. A later release must not reach that key before a human reads the
   change.
 - **SITE-ROTATE-28** — Each `dist` entry of the manifest must name a versioned
-  release URL. `scripts/deps` then verifies the signed manifest of that release
-  with the declared key. A plain `cpanm` of a URL reads the tarball with no
-  check at all.
+  release URL. A versioned URL names one set of bytes, and `deps/SHA256.txt`
+  keys its digest on that URL. A plain `cpanm` of a URL reads the tarball with
+  no check at all.
+- **SITE-ROTATE-32** — `deps/SHA256.txt` must record the digest of each `dist`
+  entry. `scripts/deps` reads a recorded digest before the signify tier, so
+  `make deps` of this repository reads no published key. A key step therefore
+  runs while the site serves no key directory. Each digest must agree with the
+  signed `SHA256` manifest of its release.
 - **SITE-ROTATE-31** — The deps manifest must install the command of each signer
   that a key step runs. `signify(1)` makes a signify key and signs with it, and
   `gpg(1)` makes an OpenPGP key and signs with it. Perl holds no private key
   operation, so a step that finds no command writes no key.
-- **SITE-ROTATE-11** — Each step must open a pull request against
-  FuguBSD/Tooling that declares the key, with the published URL and the sha256
-  of the file. A rotation without it breaks `make deps` in each consumer. The
-  callee declares no key, per FuguWeb WEB-ACTIONS-10, so the caller reads the
-  outputs of the call.
-- **SITE-ROTATE-21** — That pull request must write `deps/KEYS.txt` and
+- **SITE-ROTATE-11** — The operator must declare each new key in
+  FuguBSD/Tooling, with the published URL and the sha256 of the key file. A
+  consumer that reaches the signify tier fails `make deps` until the declaration
+  lands. The callee outputs the URL and the digest, per FuguWeb WEB-ACTIONS-2,
+  and it declares no key, per FuguWeb WEB-ACTIONS-10. The caller holds no step,
+  per SITE-ROTATE-14, so no job of this repository reads those outputs.
+- **SITE-ROTATE-21** — The declaration must write `deps/KEYS.txt` and
   `org/sync/deps/KEYS.txt`. Tooling syncs the org pack into itself, so one copy
   alone leaves the other stale and fails the drift gate.
-- **SITE-ROTATE-22** — A mint must append its line, which is the whole trust
-  order. The current key leads the file, and the next key stands under it. A
-  promote must lift its line to the top, and the caller must hold no such edit,
-  because D-01 takes site content alone. A promote must stop, and it must name
-  the work that a maintainer does.
-- **SITE-ROTATE-25** — The branch of that pull request must carry the run
-  identifier, so a second run of one step opens its own pull request.
-- **SITE-ROTATE-26** — The clone of FuguBSD/Tooling must get a git credential
-  helper, because `gh repo clone` leaves a remote that carries no credential.
-  The helper must read the token from the environment when git runs it. A token
-  that the shell expands earlier would reach the configuration file, and a token
-  in the remote URL would reach the command line.
+- **SITE-ROTATE-22** — The line order of `deps/KEYS.txt` is the trust order, and
+  the current key leads the file. The operator must append the line of a mint
+  under the current key. The operator must lift the line of a promote to the
+  top. The caller holds no such edit, because D-01 takes site content alone.

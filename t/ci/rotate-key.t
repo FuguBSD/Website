@@ -11,10 +11,10 @@
 #
 # The pairing is the guard that matters most. A run that took the
 # admin directory with the releng prefix would write a release key
-# into an admin slot, and it would give that key to four
-# repositories. Each value that a directory decides therefore comes
-# from the directory input, and the test reads each one for both
-# directories.
+# into an admin slot, and it would give that key to each repository
+# of the releng list. Each value that a directory decides therefore
+# comes from the directory input, and the test reads each one for
+# both directories.
 #
 # Nothing under .github/ runs outside a runner, so the test reads the
 # workflow as text.
@@ -53,9 +53,9 @@ my @REQUIRED = qw(
 # word leads every key name of the directory, and FuguWeb WEB-KEYS-2
 # refuses two blocks that name one word. The secret prefix names the
 # two key secrets, the variable and the App of the environment. The
-# visibility list names each repository that reads the private key: a
-# release key signs the distribution of four repositories, and an
-# admin key serves this site alone.
+# visibility list names each repository that reads the private key. A
+# releng key reaches this site, and each repository that releases a
+# Perl distribution. An admin key serves this site alone.
 my %DERIVED = (
 	releng => {
 		directory     => 'web/releng',
@@ -134,6 +134,19 @@ sub _options ($input)
 	return $block =~ /^\s+- (\S+)$/mg;
 }
 
+# _default($input):
+#	The default value of one dispatch input, or undef.
+sub _default ($input)
+{
+	my ($block) = $yml =~
+	    /^      \Q$input\E:\n(.*?)(?=^      \w+:|^\S|\z)/ms;
+	return unless defined $block;
+
+	my ($value) = $block =~ /^\s+default:\s*(\S+)\s*$/m;
+
+	return $value;
+}
+
 # _evaluate($value, $directory):
 #	One with value, as the runner reads it for one directory. The
 #	expression of a derived value is a test on the directory word,
@@ -191,10 +204,13 @@ subtest 'every dispatch input reaches the call' => sub {
 	is( join( q{ }, sort @names ), join( q{ }, sort @DISPATCH ),
 		'the dispatch declares each input of SITE-ROTATE-14' );
 
-	my $call = join "\n", map { "$_: $WITH{$_}" } sort keys %WITH;
+	# Each input reaches the value of its own name. A test that
+	# read the whole block would pass on a swap, and a swap of
+	# email and expires would give gpg(1) an address that is a
+	# date.
 	for my $name (@names) {
-		ok( $call =~ /\binputs\.\Q$name\E\b/,
-			"the call reads the $name input" );
+		like( $WITH{$name} // q{}, qr/\binputs\.\Q$name\E\b/,
+			"the $name value of the call reads the $name input" );
 	}
 };
 
@@ -223,6 +239,12 @@ subtest 'the dispatch offers the two directories, and no other' => sub {
 	my @steps = _options('step');
 	is( join( q{ }, sort @steps ),
 		'import mint promote', 'and the step input takes the three verbs' );
+
+	# SITE-ROTATE-14. A directory holds its root key first, per
+	# SITE-KEYS-4. A run with the defaults therefore mints the
+	# root, and never a subordinate key of a directory that holds
+	# no root.
+	is( _default('purpose'), 'root', 'the purpose input defaults to root' );
 };
 
 subtest 'the caller holds what a called job cannot' => sub {

@@ -11,7 +11,7 @@ website appears or goes away, edit `web/index.body.html` in the same change.
 ## Commands
 
 ```sh
-make deps        # install gitleaks and signify
+make deps        # install fuguweb, gitleaks, signify, gnupg, mandoc, lowdown
 make check       # run every gate; run it before each commit
 make test        # run the test suite
 make format-fix  # fix the Markdown, JSON and YAML formatting

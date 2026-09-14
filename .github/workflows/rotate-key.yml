@@ -34,9 +34,10 @@ name: Rotate a key
 # The callee reads each of them through the JSON form of the secrets
 # context, per FuguWeb WEB-ACTIONS-4.
 #
-# A release key signs the distribution of four repositories, and an
-# admin key serves this site alone. The visibility list says so, and
-# it gives each private key to the repositories that read it.
+# The visibility list gives each private key to the repositories
+# that read it. A releng key reaches this site, and each repository
+# that releases a Perl distribution. An admin key serves this site
+# alone.
 #
 # A root step binds each subordinate key of its directory again, per
 # FuguWeb WEB-TRUST-7. The subordinate purposes input names those
@@ -56,9 +57,13 @@ on:
           - import
           - promote
       purpose:
-        description: "What the key signs, for example release"
+        description: "The purpose word of the key, for example root"
         required: true
-        default: release
+        # SITE-KEYS-4. The root is the current key of each directory,
+        # and a step of another purpose fails while the directory
+        # holds no root. A run with the defaults therefore mints the
+        # root, and never a subordinate key.
+        default: root
         type: string
       type:
         description: "The key type of a mint or an import; a promote takes none"

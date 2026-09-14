@@ -9,9 +9,12 @@ tool bin gitleaks https://github.com/gitleaks/gitleaks/releases/download/v8.30.1
 
 # fuguweb runs in the rotation workflow, beside a private key, so
 # each version is pinned here and never resolved at run time
-# (SITE-ROTATE-15). Each release carries a signed SHA256 manifest, so
-# both entries take the signify tier: scripts/deps verifies the
-# manifest with the declared key before cpanm reads the tarball.
+# (SITE-ROTATE-15). deps/SHA256.txt records the digest of each
+# tarball below, and a recorded digest outranks the signature, so
+# make deps of this repository reads no published key
+# (SITE-ROTATE-32). A key step therefore runs while the site serves
+# no key directory. Each digest agrees with the signed SHA256
+# manifest of its release, measured on 2026-09-15.
 runtime dist https://github.com/FuguBSD/Fugu/releases/download/v0.5.0/Fugu.tar.gz
 runtime dist https://github.com/FuguBSD/FuguWeb/releases/download/v0.6.0/App-FuguWeb.tar.gz
 runtime pkg mandoc
