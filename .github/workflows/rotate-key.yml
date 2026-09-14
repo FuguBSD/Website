@@ -61,8 +61,10 @@ on:
         required: true
         # SITE-KEYS-4. The root is the current key of each directory,
         # and a step of another purpose fails while the directory
-        # holds no root. A run with the defaults therefore mints the
-        # root, and never a subordinate key.
+        # holds no root. The default therefore names the root, and
+        # never a subordinate key. A first mint of a directory that
+        # no keys block names also needs the bootstrap flag, per
+        # FuguWeb WEB-ROTATE-22, and that flag defaults to false.
         default: root
         type: string
       type:

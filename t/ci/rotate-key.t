@@ -241,9 +241,10 @@ subtest 'the dispatch offers the two directories, and no other' => sub {
 		'import mint promote', 'and the step input takes the three verbs' );
 
 	# SITE-ROTATE-14. A directory holds its root key first, per
-	# SITE-KEYS-4. A run with the defaults therefore mints the
-	# root, and never a subordinate key of a directory that holds
-	# no root.
+	# SITE-KEYS-4. The default therefore names the root, and never
+	# a subordinate key. A first mint of a directory that no keys
+	# block names also needs the bootstrap flag, per FuguWeb
+	# WEB-ROTATE-22, and that flag defaults to false.
 	is( _default('purpose'), 'root', 'the purpose input defaults to root' );
 };
 
@@ -322,6 +323,39 @@ subtest 'the manifest installs the command of each signer' => sub {
 			"$os installs signify" );
 		like( $manifest, qr/^\s*runtime\s+pkg\s+gnupg$/m,
 			"$os installs gnupg" );
+	}
+};
+
+subtest 'the digest file records each distribution' => sub {
+
+	# SITE-ROTATE-32. scripts/deps reads a recorded digest before
+	# the signify tier, so make deps of this repository reads no
+	# published key, and a key step runs while the site serves no
+	# key directory. A dist entry with no recorded digest falls to
+	# that tier, and the key step then needs the site that it
+	# writes. The test reads each manifest, so a later entry takes
+	# the guard with it.
+	my $dir  = "$RealBin/../../deps";
+	my $sums = _slurp("$dir/SHA256.txt") // q{};
+	ok( length $sums, 'the digest file is there' ) or return;
+
+	opendir my $dh, $dir or die "cannot read $dir: $!\n";
+	my @manifests = sort grep { /[.]txt\z/ } readdir $dh;
+	closedir $dh;
+
+	my @found;
+	for my $manifest (@manifests) {
+		my $text = _slurp("$dir/$manifest") // q{};
+		push @found, $text =~ /^\s*\w+\s+dist\s+(\S+)\s*$/mg;
+	}
+
+	my %seen;
+	my @dists = grep { !$seen{$_}++ } @found;
+	ok( scalar @dists, 'the manifests name a distribution' ) or return;
+
+	for my $url (@dists) {
+		like( $sums, qr/^SHA256 [(]\Q$url\E[)] = [0-9a-f]{64}$/m,
+			"the digest file records $url" );
 	}
 };
 

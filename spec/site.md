@@ -55,10 +55,10 @@ WEB-KEYS, and this site holds the description and the key files.
   word is `fugureleng` for the `releng` directory, and `fuguadmin` for the
   `admin` directory. The word leads every key name of the block, and FuguWeb
   WEB-KEYS-2 refuses two blocks that name one word.
-- **SITE-KEYS-7** — A key file that a directory holds must stay published, a
-  retired key file included. A consumer that pins an old key verifies a release
-  that the key signed. A step of the rotation workflow removes a binding file
-  alone, per FuguWeb WEB-TRUST-5 and WEB-TRUST-7.
+- **SITE-KEYS-7** — A key file of the `releng` or the `admin` directory must
+  stay published, a retired key file included. A consumer that pins an old key
+  verifies a release that the key signed. A step of the rotation workflow
+  removes a binding file alone, per FuguWeb WEB-TRUST-5 and WEB-TRUST-7.
 
 <a id="site-rotate"></a>
 
@@ -86,10 +86,10 @@ repository takes site content alone, per D-01.
   App, `<PREFIX>_APP_ID` and `<PREFIX>_APP_PRIVATE_KEY`. The operator writes
   each one, because no file of this repository can carry a secret. The callee
   binds the environment from an input, and it mints its token from that App.
-- **SITE-ROTATE-33** — A run must report the repositories that its token
-  reaches, before it writes a secret, and must never print the token. A token
-  without the organization permission fails at the write of a secret, and that
-  message names neither the App nor the permission.
+- **SITE-ROTATE-5** — A run must report the repositories that its token reaches,
+  before it writes a secret, and must never print the token. A token without the
+  organization permission fails at the write of a secret, and that message names
+  neither the App nor the permission.
 - **SITE-ROTATE-27** — Each environment must hold a deployment-branch rule that
   names `main` alone. `workflow_dispatch` runs the workflow file of the chosen
   ref. A person with write access can otherwise reach the App credentials
@@ -134,8 +134,7 @@ repository takes site content alone, per D-01.
   FuguBSD/Tooling, with the published URL and the sha256 of the key file. A
   consumer that reaches the signify tier fails `make deps` until the declaration
   lands. The callee outputs the URL and the digest, per FuguWeb WEB-ACTIONS-2,
-  and it declares no key, per FuguWeb WEB-ACTIONS-10. The caller holds no step,
-  per SITE-ROTATE-14, so no job of this repository reads those outputs.
+  and it declares no key, per FuguWeb WEB-ACTIONS-10.
 - **SITE-ROTATE-21** — The declaration must write `deps/KEYS.txt` and
   `org/sync/deps/KEYS.txt`. Tooling syncs the org pack into itself, so one copy
   alone leaves the other stale and fails the drift gate.

@@ -14,6 +14,16 @@ tool bin gitleaks https://github.com/gitleaks/gitleaks/releases/download/v8.30.1
 # (SITE-ROTATE-32). A key step therefore runs while the site serves
 # no key directory. Each digest agrees with the signed SHA256
 # manifest of its release, measured on 2026-09-15.
+#
+# To bump a pin, edit the URL below, and then run this command:
+#
+#   scripts/deps --update-sums --force
+#
+# The command needs --force. Each release below carries a signed
+# SHA256 manifest, and 'scripts/deps --update-sums' alone skips such
+# a URL. It prints "skipped the signed entry", records nothing, and
+# exits 0. A bump without --force therefore returns the entry to the
+# signify tier, and a key step then needs the site that it writes.
 runtime dist https://github.com/FuguBSD/Fugu/releases/download/v0.5.0/Fugu.tar.gz
 runtime dist https://github.com/FuguBSD/FuguWeb/releases/download/v0.6.0/App-FuguWeb.tar.gz
 runtime pkg mandoc
