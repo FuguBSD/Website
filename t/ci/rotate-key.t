@@ -198,7 +198,7 @@ subtest 'the secret reaches every repository that needs it' => sub {
 
 	# Each repository that releases a Perl distribution signs with
 	# the key, so each one reads it.
-	ok( $reads{$_}, "and $_" ) for qw(Fugu FuguVM FuguWeb);
+	ok( $reads{$_}, "and $_" ) for qw(Fugu FuguBench FuguVM FuguWeb);
 
 	# A repository that releases nothing must hold no private key.
 	# It verifies with the published one, as every consumer does.
