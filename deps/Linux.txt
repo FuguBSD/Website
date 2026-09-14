@@ -1,17 +1,34 @@
 # External dependencies of the website. scripts/deps installs each
-# line. fuguweb rotate-key signs the key manifest, so it needs
+# line. A key step signs the manifest of a key directory, so it needs
 # signify(1). The site build itself signs nothing.
 tool pkg signify-openbsd
 # The secret gate of make check runs gitleaks, so the tool environment
 # installs it before every other environment.
 tool bin gitleaks https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_{os}_{arch}.tar.gz gitleaks
 
-# fuguweb rotate-key runs in the rotation workflow, beside a private
-# key, so each version is pinned here and never resolved at run time
-# (SITE-ROTATE-15). Each release carries a signed SHA256 manifest, so
-# both entries take the signify tier: scripts/deps verifies the
-# manifest with the declared key before cpanm reads the tarball.
-runtime dist https://github.com/FuguBSD/Fugu/releases/download/v0.4.0/Fugu.tar.gz
-runtime dist https://github.com/FuguBSD/FuguWeb/releases/download/v0.5.0/App-FuguWeb.tar.gz
+# fuguweb runs in the rotation workflow, beside a private key, so
+# each version is pinned here and never resolved at run time
+# (SITE-ROTATE-15). deps/SHA256.txt records the digest of each
+# tarball below, and a recorded digest outranks the signature, so
+# make deps of this repository reads no published key
+# (SITE-ROTATE-32). A key step therefore runs while the site serves
+# no key directory. Each digest agrees with the signed SHA256
+# manifest of its release, measured on 2026-09-15.
+#
+# To bump a pin, edit the URL below, and then run this command:
+#
+#   scripts/deps --update-sums --force
+#
+# The command needs --force. Each release below carries a signed
+# SHA256 manifest, and 'scripts/deps --update-sums' alone skips such
+# a URL. It prints "skipped the signed entry", records nothing, and
+# exits 0. A bump without --force therefore returns the entry to the
+# signify tier, and a key step then needs the site that it writes.
+runtime dist https://github.com/FuguBSD/Fugu/releases/download/v0.5.0/Fugu.tar.gz
+runtime dist https://github.com/FuguBSD/FuguWeb/releases/download/v0.6.0/App-FuguWeb.tar.gz
 runtime pkg mandoc
 runtime pkg lowdown
+
+# Fugu::OpenPGP drives gpg(1), and it holds no other engine. An
+# OpenPGP mint of a key directory therefore needs the package.
+runtime pkg gnupg

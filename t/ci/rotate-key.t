@@ -2,14 +2,22 @@
 # ex:ts=8 sw=4:
 # Guards for .github/workflows/rotate-key.yml, per SITE-ROTATE
 #
-# The workflow holds the strongest credential of the organization, and
-# it publishes key material. Nothing under .github/ runs outside a
-# runner, so this test reads the workflow as text.
+# The workflow is a thin caller of the reusable workflow of FuguWeb.
+# The callee holds the order of the steps, and FuguWeb WEB-ACTIONS
+# states each rule of it. This test holds what the caller owns: the
+# pin of the callee, every input that the callee needs, the three
+# keys that a called job cannot hold, and the pairing of each key
+# directory with its own secrets.
 #
-# The order of the steps is the design. A review panel reproduced the
-# faults that a wrong order causes: an organization that names a key
-# no consumer can fetch, and a published key whose private half no
-# slot holds. Each guard below holds one of those faults out.
+# The pairing is the guard that matters most. A run that took the
+# admin directory with the releng prefix would write a release key
+# into an admin slot, and it would give that key to each repository
+# of the releng list. Each value that a directory decides therefore
+# comes from the directory input, and the test reads each one for
+# both directories.
+#
+# Nothing under .github/ runs outside a runner, so the test reads the
+# workflow as text.
 
 use v5.36;
 use Test::More;
@@ -23,254 +31,267 @@ open my $fh, '<', $path or die "cannot read $path: $!\n";
 my $yml = do { local $/; <$fh> };
 close $fh;
 
+# The reusable workflow that holds every step of a key rotation.
+use constant CALLEE => 'FuguBSD/FuguWeb/.github/workflows/keys-rotate.yml';
+
+# The dispatch inputs of the caller, per SITE-ROTATE-14. With no
+# subordinate purposes input, a root promote binds no subordinate
+# key, and the callee reports nothing.
+my @DISPATCH = qw(
+    step purpose type directory bootstrap subordinate_purposes email
+    expires file
+);
+
+# The inputs that the callee declares as required. A call that omits
+# one of them fails at the start of the run, with no key written.
+my @REQUIRED = qw(
+    step purpose directory org url environment secret_prefix owner
+    publish_workflow
+);
+
+# Each value that the directory decides, for each directory. The org
+# word leads every key name of the directory, and FuguWeb WEB-KEYS-2
+# refuses two blocks that name one word. The secret prefix names the
+# two key secrets, the variable and the App of the environment. The
+# visibility list names each repository that reads the private key. A
+# releng key reaches this site, and each repository that releases a
+# Perl distribution. An admin key serves this site alone.
+my %DERIVED = (
+	releng => {
+		directory     => 'web/releng',
+		environment   => 'releng',
+		url           => 'https://www.fugubsd.org/releng',
+		org           => 'fugureleng',
+		secret_prefix => 'RELENG',
+		visibility    => 'Website,Fugu,FuguBench,FuguSeed,FuguVM,FuguWeb',
+	},
+	admin => {
+		directory     => 'web/admin',
+		environment   => 'admin',
+		url           => 'https://www.fugubsd.org/admin',
+		org           => 'fuguadmin',
+		secret_prefix => 'ADMIN',
+		visibility    => 'Website',
+	},
+);
+
 # _slurp($path):
 #	Whole file as text, or undef.
-sub _slurp ($path)
+sub _slurp ($file)
 {
-	open my $in, '<', $path or return;
+	open my $in, '<', $file or return;
 	my $text = do { local $/; <$in> };
 	close $in;
 
 	return $text;
 }
 
-# _steps():
-#	The step names, in the order that the file holds them.
-sub _steps ()
+# _with():
+#	The with block of the call, as a name to value map. A value
+#	that YAML folds over two lines joins with one space, as the
+#	runner reads it.
+sub _with ()
 {
-	return $yml =~ /^      - name: (.+)$/mg;
-}
+	my %with;
+	my $name;
+	my $in = 0;
 
-# _at($name):
-#	The position of one step, or undef.
-sub _at ($name)
-{
-	my @steps = _steps();
-	for my $i ( 0 .. $#steps ) {
-		return $i if $steps[$i] eq $name;
+	for my $line ( split /\n/, $yml ) {
+		if ( $line =~ /^    with:\s*$/ ) {
+			$in = 1;
+			next;
+		}
+		next unless $in;
+
+		# The block ends at the first line that stands outside
+		# it. A comment line holds no value.
+		last if $line !~ /^      \s*\S/;
+		next if $line =~ /^\s*#/;
+
+		if ( $line =~ /^      (\w+):\s*(.*?)\s*$/ ) {
+			$name = $1;
+			$with{$name} = $2;
+			next;
+		}
+
+		if ( defined $name && $line =~ /^        \s*(.*?)\s*$/ ) {
+			$with{$name} =
+			    join q{ }, grep { length } $with{$name}, $1;
+		}
 	}
 
-	return;
+	return %with;
 }
 
-# _step($name):
-#	The text of one step, from its name to the next step.
-sub _step ($name)
+# _options($input):
+#	The choice options of one dispatch input, in file order.
+sub _options ($input)
 {
-	my ($block) =
-	    $yml =~ /^      - name: \Q$name\E\n(.*?)(?=^      - name: |\z)/ms;
+	my ($block) = $yml =~
+	    /^      \Q$input\E:\n(.*?)(?=^      \w+:|^\S|\z)/ms;
+	return unless defined $block;
 
-	return $block;
+	return $block =~ /^\s+- (\S+)$/mg;
 }
 
-my @STEPS = _steps();
+# _default($input):
+#	The default value of one dispatch input, or undef.
+sub _default ($input)
+{
+	my ($block) = $yml =~
+	    /^      \Q$input\E:\n(.*?)(?=^      \w+:|^\S|\z)/ms;
+	return unless defined $block;
 
-subtest 'the steps of a rotation stand in order' => sub {
-	my %at = map { $STEPS[$_] => $_ } 0 .. $#STEPS;
+	my ($value) = $block =~ /^\s+default:\s*(\S+)\s*$/m;
 
-	my @want = (
-		'Refuse a purpose that this workflow cannot address',
-		'Install the dependencies',
-		'Confirm that fuguweb runs',
-		'Mint an installation token',
-		'Run the rotation step',
-		'Store the new private key',
-		'Commit the key directory',
-		'Publish the site',
-		'Confirm the published site serves what this run wrote',
-		'Name the active slot',
-		'Declare the key in FuguBSD/Tooling',
-	);
+	return $value;
+}
 
-	for my $name (@want) {
-		ok( defined $at{$name}, "the step '$name' is there" );
+# _evaluate($value, $directory):
+#	One with value, as the runner reads it for one directory. The
+#	expression of a derived value is a test on the directory word,
+#	the value that a true test takes, and the value that a false
+#	test takes.
+sub _evaluate ( $value, $directory )
+{
+	my $out = $value;
+
+	$out =~ s{
+	    \$\{\{\s*inputs\.directory\s*==\s*'(\w+)'
+	    \s*&&\s*'([^']*)'\s*\|\|\s*'([^']*)'\s*\}\}
+	}{$directory eq $1 ? $2 : $3}gex;
+
+	$out =~ s{\$\{\{\s*inputs\.directory\s*\}\}}{$directory}g;
+
+	return $out;
+}
+
+my %WITH = _with();
+
+subtest 'the caller pins the callee to a commit' => sub {
+	my @uses = $yml =~ /^\s*uses:\s*(\S+)\s*$/mg;
+	is( scalar @uses, 1, 'the workflow calls one workflow' ) or return;
+
+	my ( $ref, $pin ) = $uses[0] =~ /^(.*)\@(.*)$/;
+	is( $ref, CALLEE, 'it calls the key workflow of FuguWeb' );
+
+	# The callee runs beside a private key, so a tag or a branch
+	# would let another commit reach that key. The pin below is
+	# the commit of the v0.6.0 tag.
+	like( $pin, qr/^[0-9a-f]{40}$/, 'and it pins a commit' );
+};
+
+subtest 'the caller passes every input that the callee requires' => sub {
+	for my $name (@REQUIRED) {
+		ok( length( $WITH{$name} // q{} ), "the call passes $name" );
 	}
 
-	# SITE-ROTATE-15. Unpinned code must not run beside the App
-	# credentials, so each install runs before the token.
-	ok(
-		$at{'Install the dependencies'} <
-		    $at{'Mint an installation token'},
-		'each install runs before the token'
-	);
-
-	# The guard reaches no credential.
-	ok(
-		$at{'Refuse a purpose that this workflow cannot address'} <
-		    $at{'Mint an installation token'},
-		'the purpose guard runs before the token'
-	);
-
-	# SITE-ROTATE-23. No reader reaches the idle slot until the
-	# variable names it, and a later write could publish a key
-	# whose private half no slot holds.
-	ok(
-		$at{'Store the new private key'} <
-		    $at{'Commit the key directory'},
-		'the private key reaches its slot before the commit'
-	);
-
-	# SITE-ROTATE-18. The variable names the active slot, so it
-	# moves only after the site serves what the run wrote.
-	ok(
-		$at{'Confirm the published site serves what this run wrote'} <
-		    $at{'Name the active slot'},
-		'the variable moves after the site serves the key'
-	);
-	ok(
-		$at{'Commit the key directory'} < $at{'Publish the site'},
-		'the publish follows the commit'
-	);
-	ok(
-		$at{'Name the active slot'} <
-		    $at{'Declare the key in FuguBSD/Tooling'},
-		'and the declaration comes last'
-	);
+	# The callee holds no organization name and no domain, per
+	# FuguWeb WEB-ACTIONS-9, so each one stands here. The org word
+	# belongs to one directory, so the subtest below reads it.
+	is( $WITH{owner}, 'FuguBSD', 'the owner is FuguBSD' );
+	is( $WITH{publish_workflow},
+		'publish.yml', 'and the callee starts publish.yml' );
 };
 
-subtest 'the workflow can start the publish' => sub {
+subtest 'every dispatch input reaches the call' => sub {
+	my ($inputs) = $yml =~ /^    inputs:\n(.*?)(?=^permissions:)/ms;
+	ok( $inputs, 'the dispatch declares inputs' ) or return;
 
-	# SITE-ROTATE-19. GitHub raises no workflow run from a push
-	# that GITHUB_TOKEN makes, so the site never rebuilds by
-	# itself. workflow_dispatch is the one event that the token
-	# can raise, and it needs the actions grant.
-	like( $yml, qr/^permissions:\n(?:  .*\n)*  actions: write$/m,
-		'the job can write actions' );
+	my @names = $inputs =~ /^      (\w+):$/mg;
+	ok( scalar @names, 'and the test reads each name' ) or return;
 
-	my $publish = _step('Publish the site');
-	ok( $publish, 'the publish step is there' ) or return;
+	is( join( q{ }, sort @names ), join( q{ }, sort @DISPATCH ),
+		'the dispatch declares each input of SITE-ROTATE-14' );
 
-	like( $publish, qr/gh workflow run publish\.yml/,
-		'it dispatches the publish' );
-
-	# SITE-ROTATE-24. A run identifier is a race, because the
-	# publish holds a concurrency group.
-	unlike( $publish, qr/gh run (?:list|view|watch)/,
-		'and it watches no run' );
+	# Each input reaches the value of its own name. A test that
+	# read the whole block would pass on a swap, and a swap of
+	# email and expires would give gpg(1) an address that is a
+	# date.
+	for my $name (@names) {
+		like( $WITH{$name} // q{}, qr/\binputs\.\Q$name\E\b/,
+			"the $name value of the call reads the $name input" );
+	}
 };
 
-subtest 'the workflow reads the site before it declares a key' => sub {
-	my $confirm =
-	    _step('Confirm the published site serves what this run wrote');
-	ok( $confirm, 'the confirm step is there' ) or return;
-
-	# SITE-ROTATE-20. A promote writes no key file, so the
-	# manifest pair is what a promote changes.
-	like( $confirm, qr/files="SHA256 SHA256\.sig"/,
-		'it reads the manifest pair' );
-	like( $confirm, qr/\[ "\$STEP" = mint \] && files="\$files \$NAME"/,
-		'and the key file of a mint' );
-
-	# A cache can answer 200 with older bytes.
-	like( $confirm, qr/cmp -s/, 'it compares the bytes' );
-	like( $confirm, qr/exit 1/, 'and it fails when the site differs' );
+subtest 'each directory takes its own secrets and its own URL' => sub {
+	for my $directory ( sort keys %DERIVED ) {
+		my $want = $DERIVED{$directory};
+		for my $name ( sort keys %{$want} ) {
+			is( _evaluate( $WITH{$name} // q{}, $directory ),
+				$want->{$name},
+				"$directory: $name is $want->{$name}" );
+		}
+	}
 };
 
-subtest 'the private key stays out of every log and command line' => sub {
-	my $mask = _step('Mask the new private key');
-	ok( $mask, 'the mask step is there' ) or return;
-	like( $mask, qr/::add-mask::/, 'it masks each line of the key' );
+subtest 'the dispatch offers the two directories, and no other' => sub {
 
-	ok( _at('Mask the new private key') < _at('Store the new private key'),
-		'and it runs before the key reaches a command' );
+	# The derivation of a value holds two branches, so a third
+	# word would take the values of the admin directory, and its
+	# secrets with them.
+	my @directories = _options('directory');
+	is( join( q{ }, sort @directories ),
+		'admin releng', 'the directory input takes the two words' );
 
-	# SITE-ROTATE-16. The body of a secret comes from a file, and
-	# gh secret set takes it on standard input.
-	my $store = _step('Store the new private key');
-	ok( $store, 'the store step is there' ) or return;
-	like( $store, qr/^\s*<\s*"\$WORK\/new\.sec"/m,
-		'the secret comes in on standard input' );
-	unlike( $store, qr/--body/, 'and never on a command line' );
+	# The callee runs the verb of the step, which is mint-key,
+	# import-key or promote-key.
+	my @steps = _options('step');
+	is( join( q{ }, sort @steps ),
+		'import mint promote', 'and the step input takes the three verbs' );
+
+	# SITE-ROTATE-14. A directory holds its root key first, per
+	# SITE-KEYS-4. The default therefore names the root, and never
+	# a subordinate key. A first mint of a directory that no keys
+	# block names also needs the bootstrap flag, per FuguWeb
+	# WEB-ROTATE-22, and that flag defaults to false.
+	is( _default('purpose'), 'root', 'the purpose input defaults to root' );
 };
 
-subtest 'the secret reaches every repository that needs it' => sub {
-	my $store = _step('Store the new private key');
-	ok( $store, 'the store step is there' ) or return;
+subtest 'the caller holds what a called job cannot' => sub {
 
-	my ($repos) = $store =~ /--repos (\S+)/;
-	ok( $repos, 'the step names the repositories' ) or return;
-	my %reads = map { $_ => 1 } split /,/, $repos;
+	# FuguWeb WEB-ACTIONS-14. permissions, concurrency and
+	# secrets: inherit stay in the caller.
+	my ($permissions) = $yml =~ /^permissions:\n((?:  .*\n|\s*#.*\n)+)/m;
+	ok( $permissions, 'the caller holds the permissions' ) or return;
 
-	# SITE-ROTATE-2. This repository runs the workflow, so a list
-	# that named the release callers alone would leave a later run
-	# reading its own key secret as empty.
-	ok( $reads{Website}, 'this repository reads the secret' );
+	# The callee commits the key directory and the description.
+	like( $permissions, qr/^  contents: write$/m, 'the job can write the tree' );
 
-	# Each repository that releases a Perl distribution signs with
-	# the key, so each one reads it.
-	ok( $reads{$_}, "and $_" ) for qw(Fugu FuguBench FuguVM FuguWeb);
+	# The callee starts the publish itself, per FuguWeb
+	# WEB-ACTIONS-8, because a push that GITHUB_TOKEN makes raises
+	# no workflow run.
+	like( $permissions, qr/^  actions: write$/m,
+		'and it can start the publish' );
 
-	# A repository that releases nothing must hold no private key.
-	# It verifies with the published one, as every consumer does.
-	ok( !$reads{FuguTTX}, 'and FuguTTX, which releases none, does not' );
+	# A second run beside the first would push the same
+	# description from another tree.
+	like( $yml, qr/^concurrency:\n(?:\s*#.*\n)*  group: \S+$/m,
+		'the caller holds a concurrency group' );
+	like( $yml, qr/^  cancel-in-progress: false$/m,
+		'and no run cancels another' );
+
+	# The callee reads each secret by a name that an input forms,
+	# so the whole context must reach it.
+	like( $yml, qr/^    secrets: inherit$/m, 'the call inherits the secrets' );
 };
 
-subtest 'the declaration writes both copies of the key file' => sub {
-	my $declare = _step('Declare the key in FuguBSD/Tooling');
-	ok( $declare, 'the declare step is there' ) or return;
+subtest 'the caller runs nothing of its own' => sub {
 
-	# SITE-ROTATE-21. Tooling syncs the org pack into itself, so
-	# one copy alone fails the drift gate of that pull request.
-	like(
-		$declare,
-		qr{for keys in org/sync/deps/KEYS\.txt deps/KEYS\.txt},
-		'it writes the canonical copy and the synced one'
-	);
-
-	# SITE-ROTATE-25. A second run of one step must open its own
-	# pull request.
-	like( $declare, qr/branch="keys\/\$STEM-mint-\$RUN"/,
-		'the branch carries the run identifier' );
-
-	# SITE-ROTATE-22. A promote must lift its line to the top, and
-	# this workflow holds no such edit.
-	like( $declare, qr/if: inputs\.step == 'mint'/m,
-		'a mint is what opens the pull request' );
-	my $refuse = _step('Refuse to declare a promote');
-	ok( $refuse, 'and a promote stops with a reason' );
-};
-
-subtest 'the declaration can push its branch' => sub {
-	my $declare = _step('Declare the key in FuguBSD/Tooling');
-	ok( $declare, 'the declare step is there' ) or return;
-
-	# SITE-ROTATE-26. gh repo clone leaves a remote that carries
-	# no credential, and the push then asks for a username.
-	like( $declare, qr/git config credential\.helper/,
-		'the clone gets a credential helper' );
-
-	# The helper must read the token when git runs it. A token
-	# that the shell expands here would reach the config file.
-	like( $declare, qr/'[^']*"password=\$GH_TOKEN"[^']*'/,
-		'and the helper reads the token from the environment' );
-
-	# The token must reach no command line and no remote URL.
-	unlike( $declare, qr/x-access-token:/,
-		'no remote URL carries the token' );
-};
-
-subtest 'the workflow serves one purpose, and it says so' => sub {
-
-	# SITE-ROTATE-17. The secrets context cannot build a name from
-	# an input, so a docs mint would write the release slot.
-	my $guard = _step('Refuse a purpose that this workflow cannot address');
-	ok( $guard, 'the guard is there' ) or return;
-
-	like( $guard, qr/!= release/, 'it takes the release purpose alone' );
-	like( $guard, qr/exit 1/,     'and it stops every other one' );
+	# The caller holds no step. Each command of a rotation runs in
+	# the callee, beside the private key, and FuguWeb WEB-ACTIONS
+	# states every guard of it.
+	unlike( $yml, qr/^\s*steps:$/m, 'the caller declares no step' );
+	unlike( $yml, qr/^\s*run:/m,    'and it runs no command' );
 };
 
 subtest 'each install names the version that it installs' => sub {
 
-	# SITE-ROTATE-15. This job runs the installed code beside a
-	# private key, so the manifest pins each version. The workflow
-	# holds no install of its own.
-	my $install = _step('Install the dependencies');
-	ok( $install, 'the install step is there' ) or return;
-	# A command, and never a comment: the match starts the line.
-	unlike( $install, qr/^\s*(?:sudo\s+)?cpanm\b/m,
-		'the workflow runs no install of its own' );
-
+	# SITE-ROTATE-15. The callee installs with make deps of this
+	# repository, per FuguWeb WEB-ACTIONS-5, and it runs that code
+	# beside a private key. The manifest therefore pins each
+	# version, and a later release reaches no key before a human
+	# reads the change.
 	my $manifest = _slurp("$RealBin/../../deps/Linux.txt") // q{};
 	ok( length $manifest, 'the manifest is there' ) or return;
 
@@ -284,9 +305,58 @@ subtest 'each install names the version that it installs' => sub {
 			"the version is pinned: $url" );
 	}
 
-	like( join( ' ', @dists ), qr{/FuguBSD/Fugu/}, 'Fugu is one of them' );
-	like( join( ' ', @dists ), qr{/FuguBSD/FuguWeb/},
+	like( join( q{ }, @dists ), qr{/FuguBSD/Fugu/}, 'Fugu is one of them' );
+	like( join( q{ }, @dists ), qr{/FuguBSD/FuguWeb/},
 		'and FuguWeb is the other' );
+};
+
+subtest 'the manifest installs the command of each signer' => sub {
+
+	# SITE-ROTATE-31. Fugu::Signify runs signify(1) for each
+	# private key operation, and Fugu::OpenPGP drives gpg(1) with
+	# no other engine. A step that finds no command writes no key.
+	for my $os (qw(Darwin Linux)) {
+		my $manifest = _slurp("$RealBin/../../deps/$os.txt") // q{};
+		ok( length $manifest, "the $os manifest is there" ) or next;
+
+		like( $manifest, qr/^\s*tool\s+pkg\s+signify\S*$/m,
+			"$os installs signify" );
+		like( $manifest, qr/^\s*runtime\s+pkg\s+gnupg$/m,
+			"$os installs gnupg" );
+	}
+};
+
+subtest 'the digest file records each distribution' => sub {
+
+	# SITE-ROTATE-32. scripts/deps reads a recorded digest before
+	# the signify tier, so make deps of this repository reads no
+	# published key, and a key step runs while the site serves no
+	# key directory. A dist entry with no recorded digest falls to
+	# that tier, and the key step then needs the site that it
+	# writes. The test reads each manifest, so a later entry takes
+	# the guard with it.
+	my $dir  = "$RealBin/../../deps";
+	my $sums = _slurp("$dir/SHA256.txt") // q{};
+	ok( length $sums, 'the digest file is there' ) or return;
+
+	opendir my $dh, $dir or die "cannot read $dir: $!\n";
+	my @manifests = sort grep { /[.]txt\z/ } readdir $dh;
+	closedir $dh;
+
+	my @found;
+	for my $manifest (@manifests) {
+		my $text = _slurp("$dir/$manifest") // q{};
+		push @found, $text =~ /^\s*\w+\s+dist\s+(\S+)\s*$/mg;
+	}
+
+	my %seen;
+	my @dists = grep { !$seen{$_}++ } @found;
+	ok( scalar @dists, 'the manifests name a distribution' ) or return;
+
+	for my $url (@dists) {
+		like( $sums, qr/^SHA256 [(]\Q$url\E[)] = [0-9a-f]{64}$/m,
+			"the digest file records $url" );
+	}
 };
 
 done_testing();

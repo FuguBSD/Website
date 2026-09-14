@@ -29,109 +29,116 @@ specifies the content and the publication.
 
 ## The published keys
 
-The organization publishes its public keys here, so a consumer install can fetch
-a key and verify a release with it. FuguWeb holds the key directory, per FuguWeb
+The organization publishes its public keys here. A consumer fetches a key and
+verifies a release with it. FuguWeb holds the key directory, per FuguWeb
 WEB-KEYS, and this site holds the description and the key files.
 
-- **SITE-KEYS-1** — `.fuguwebrc` must hold one `keys` block with the
-  organization word `fugubsd`, and the published prefix
-  `https://www.fugubsd.org/keys`.
-- **SITE-KEYS-2** — Each key must live in `web/keys/`, and one `key` block must
-  describe it.
-- **SITE-KEYS-3** — `web/keys/SHA256` and `web/keys/SHA256.sig` are source
-  files. The site build cannot sign, so the rotation workflow writes both.
-- **SITE-KEYS-4** — The first key must be `fugubsd-1-release.pub`, a signify key
-  that signs the release assets.
-- **SITE-KEYS-5** — The description block and the first key must land in one
-  commit. A block that names an empty key directory fails every build.
+- **SITE-KEYS-1** — The site must publish two key directories. The `releng`
+  directory holds the keys that sign the releases, at
+  `https://www.fugubsd.org/releng`. The `admin` directory holds the keys that
+  reach the administrators, at `https://www.fugubsd.org/admin`. `.fuguwebrc`
+  must hold one `keys` block for each one.
+- **SITE-KEYS-2** — Each key must live in the directory of its block,
+  `web/releng` or `web/admin`. One `key` block must describe each key.
+- **SITE-KEYS-3** — The `SHA256` manifest and the `SHA256.sig` signature of each
+  directory are source files. The site build cannot sign, so a step of the
+  rotation workflow writes both.
+- **SITE-KEYS-4** — Each directory must hold one `current` key of the purpose
+  `root`, and that key must be a signify key. The root signs the manifest of its
+  directory, and each other key of the directory holds a binding over the root.
+  FuguWeb WEB-TRUST states each binding rule.
+- **SITE-KEYS-5** — A `keys` block and the first key of its directory must land
+  in one commit. A block that names a directory which holds no key fails the
+  whole load. A bootstrap mint therefore writes the block, the first key and the
+  manifest together.
+- **SITE-KEYS-6** — Each `keys` block must take an `org` word of its own. The
+  word is `fugureleng` for the `releng` directory, and `fuguadmin` for the
+  `admin` directory. The word leads every key name of the block, and FuguWeb
+  WEB-KEYS-2 refuses two blocks that name one word.
+- **SITE-KEYS-7** — A key file of the `releng` or the `admin` directory must
+  stay published, a retired key file included. A consumer that pins an old key
+  verifies a release that the key signed. A step of the rotation workflow
+  removes a binding file alone, per FuguWeb WEB-TRUST-5 and WEB-TRUST-7.
 
 <a id="site-rotate"></a>
 
 ## The rotation workflow
 
-A workflow of this repository generates each release key and rotates it. No
-human handles the private key at any point.
+A workflow of this repository mints each key and rotates it. No human handles a
+private key at any point.
 
-The workflow holds the credential, the organization state and the publication.
-It holds no rotation logic: `fuguweb rotate-key` writes the key directory, and
-FuguWeb WEB-ROTATE states every trust rule of that command. This repository
-takes site content alone, per D-01.
+The workflow is a thin caller. FuguWeb holds the order of the steps in the
+reusable workflow `keys-rotate.yml`, per FuguWeb WEB-ACTIONS. The `fuguweb`
+verbs hold every trust rule, per FuguWeb WEB-ROTATE and WEB-TRUST. This
+repository takes site content alone, per D-01.
 
-- **SITE-ROTATE-1** — Two organization secrets `SIGNIFY_RELEASE_KEY_A` and
-  `SIGNIFY_RELEASE_KEY_B` must hold the private keys, and the organization
-  variable `SIGNIFY_RELEASE_SLOT` must name the active slot.
-- **SITE-ROTATE-2** — Each secret must be visible to every repository that
-  releases a Perl distribution, and to this repository. The shared release
-  workflow runs in the caller, and this repository reads the active key to sign
-  a manifest. A repository that releases nothing must hold no private key: it
-  verifies with the published one.
-- **SITE-ROTATE-4** — The workflow must mint its token from the release
-  engineering GitHub App, and must bind the `releng` environment that holds the
-  App credentials.
-- **SITE-ROTATE-27** — The `releng` environment must hold a deployment-branch
-  rule that names `main` alone. `workflow_dispatch` runs the workflow file of
-  the chosen ref. A person with write access can otherwise reach the App
-  credentials through a branch of their own. The rule is a repository setting,
-  and no file of this repository can carry it. The operator sets it.
-- **SITE-ROTATE-5** — The workflow must report the repositories that the token
-  reaches, before it writes a secret, and must never print the token.
-- **SITE-ROTATE-14** — The workflow must call `fuguweb rotate-key` for each
-  step. It must install `fuguweb` from a release, and never from a checkout.
-- **SITE-ROTATE-15** — Each install must run in its own step, before the step
-  that mints the token. The deps manifest must name the version that it
-  installs, and the workflow must run no install of its own. This job runs the
-  installed code beside a private key. A later release must not reach that key
-  before a human reads the change.
+- **SITE-ROTATE-1** — Two organization secrets must hold the private keys of one
+  purpose, and one organization variable must name the active slot. The names
+  are `<PREFIX>_<PURPOSE>_KEY_A`, `<PREFIX>_<PURPOSE>_KEY_B` and
+  `<PREFIX>_<PURPOSE>_SLOT`. The prefix is `RELENG` for the `releng` directory,
+  and `ADMIN` for the `admin` directory.
+- **SITE-ROTATE-2** — Each secret of `releng` must be visible to this
+  repository, and to each repository that releases a Perl distribution. Each
+  secret of `admin` must be visible to this repository alone. A repository that
+  releases nothing must hold no private key: it verifies with the published one.
+- **SITE-ROTATE-4** — Each directory must take an environment of its own,
+  `releng` or `admin`. The environment must hold the credentials of a GitHub
+  App, `<PREFIX>_APP_ID` and `<PREFIX>_APP_PRIVATE_KEY`. The operator writes
+  each one, because no file of this repository can carry a secret. The callee
+  binds the environment from an input, and it mints its token from that App.
+- **SITE-ROTATE-5** — A run must report the repositories that its token reaches,
+  before it writes a secret, and must never print the token. A token without the
+  organization permission fails at the write of a secret, and that message names
+  neither the App nor the permission.
+- **SITE-ROTATE-27** — Each environment must hold a deployment-branch rule that
+  names `main` alone. `workflow_dispatch` runs the workflow file of the chosen
+  ref. A person with write access can otherwise reach the App credentials
+  through a branch of their own. The rule is a repository setting, and no file
+  of this repository can carry it. The operator sets it.
+- **SITE-ROTATE-14** — The workflow must call the reusable workflow of FuguWeb,
+  and must hold no step of its own. It must pin the callee to a commit, because
+  the callee runs beside a private key. Its dispatch must take the step, the
+  purpose, the type, the directory, the bootstrap flag and the subordinate
+  purposes. The purpose must default to `root`, because each directory takes its
+  root key first, per SITE-KEYS-4. It must also take the address and the expiry
+  of an OpenPGP mint, and the file of an import. A root step binds each
+  subordinate key again, per FuguWeb WEB-TRUST-7, and an empty value binds none.
+- **SITE-ROTATE-29** — The directory must be a choice input. The workflow must
+  derive each value that the directory decides. Those values are the path in
+  this tree, the environment, the org word, the secret prefix, the published
+  prefix and the visibility list. A run must never pair one directory with the
+  secrets of another.
+- **SITE-ROTATE-30** — The caller must hold `permissions`, `concurrency` and
+  `secrets: inherit`, per FuguWeb WEB-ACTIONS-14. The permissions must grant
+  `contents: write` for the commit of the key directory, and `actions: write`
+  for the publish that the callee starts.
+- **SITE-ROTATE-15** — The deps manifest must pin the version of each
+  distribution that a key step installs. The callee installs with `make deps` of
+  this repository, per FuguWeb WEB-ACTIONS-5, and it runs that code beside a
+  private key. A later release must not reach that key before a human reads the
+  change.
 - **SITE-ROTATE-28** — Each `dist` entry of the manifest must name a versioned
-  release URL. `scripts/deps` then verifies the signed manifest of that release
-  with the declared key. A plain `cpanm` of a URL reads the tarball with no
-  check at all.
-- **SITE-ROTATE-16** — The workflow must mask the private key that a mint
-  writes. It must read the key from a file on standard input, because a command
-  line shows the key in the process table.
-- **SITE-ROTATE-17** — Each secret name must carry the purpose word. The
-  `secrets` context cannot build a name from an input, so the workflow must name
-  its secrets literally. It must refuse a purpose that it cannot address. A
-  rotation of one purpose must never write the slot of another.
-- **SITE-ROTATE-9** — The promote step must move the variable to the other slot.
-- **SITE-ROTATE-18** — The workflow must move the organization variable only
-  after the published site serves what the run wrote. The variable names the
-  active slot. A run that moved it and then failed would name a key that the
-  site does not serve.
-- **SITE-ROTATE-23** — The workflow must write the private key into the idle
-  slot before it commits the key directory. No reader reaches the idle slot
-  until the variable names it. A later write could publish a key whose private
-  half no slot holds.
-- **SITE-ROTATE-19** — The workflow must start the publish of the site itself. A
-  push that `GITHUB_TOKEN` makes raises no workflow run, so the site would never
-  rebuild and the published URL would answer 404. `workflow_dispatch` is the one
-  event that the token can raise.
-- **SITE-ROTATE-24** — The workflow must watch no run of the publish. The
-  publish holds a concurrency group, so one run can cancel another and a run
-  identifier tells nothing. The site itself is the fact to read.
-- **SITE-ROTATE-20** — The workflow must confirm that the published site serves
-  every file that the run wrote, byte for byte. It must do this before it
-  declares a key anywhere. A promote writes no key file, and a cache can answer
-  200 with older bytes.
-- **SITE-ROTATE-11** — Each step must open a pull request against
-  FuguBSD/Tooling that declares the key, with the published URL and the sha256
-  of the file. A rotation without it breaks `make deps` in each consumer.
-- **SITE-ROTATE-21** — That pull request must write `deps/KEYS.txt` and
+  release URL. A versioned URL names one set of bytes, and `deps/SHA256.txt`
+  keys its digest on that URL. A plain `cpanm` of a URL reads the tarball with
+  no check at all.
+- **SITE-ROTATE-32** — `deps/SHA256.txt` must record the digest of each `dist`
+  entry. `scripts/deps` reads a recorded digest before the signify tier, so
+  `make deps` of this repository reads no published key. A key step therefore
+  runs while the site serves no key directory. Each digest must agree with the
+  signed `SHA256` manifest of its release.
+- **SITE-ROTATE-31** — The deps manifest must install the command of each signer
+  that a key step runs. `signify(1)` makes a signify key and signs with it, and
+  `gpg(1)` makes an OpenPGP key and signs with it. Perl holds no private key
+  operation, so a step that finds no command writes no key.
+- **SITE-ROTATE-11** — The operator must declare each new key in
+  FuguBSD/Tooling, with the published URL and the sha256 of the key file. A
+  consumer that reaches the signify tier fails `make deps` until the declaration
+  lands. The callee outputs the URL and the digest, per FuguWeb WEB-ACTIONS-2,
+  and it declares no key, per FuguWeb WEB-ACTIONS-10.
+- **SITE-ROTATE-21** — The declaration must write `deps/KEYS.txt` and
   `org/sync/deps/KEYS.txt`. Tooling syncs the org pack into itself, so one copy
   alone leaves the other stale and fails the drift gate.
-- **SITE-ROTATE-22** — A mint must append its line, which is the whole trust
-  order. The current key leads the file, and the next key stands under it. A
-  promote must lift its line to the top, and this workflow must hold no such
-  edit, because D-01 takes site content alone. A promote must stop, and it must
-  name the work that a maintainer does.
-- **SITE-ROTATE-25** — The branch of that pull request must carry the run
-  identifier, so a second run of one step opens its own pull request.
-- **SITE-ROTATE-26** — The clone of FuguBSD/Tooling must get a git credential
-  helper, because `gh repo clone` leaves a remote that carries no credential.
-  The helper must read the token from the environment when git runs it. A token
-  that the shell expands earlier would reach the configuration file, and a token
-  in the remote URL would reach the command line.
-- **SITE-ROTATE-12** — A retired key file must stay published, so a release that
-  it signed still verifies.
-- **SITE-ROTATE-13** — The workflow must remove every private key file that it
-  wrote, whatever the outcome of the run.
+- **SITE-ROTATE-22** — The line order of `deps/KEYS.txt` is the trust order, and
+  the current key leads the file. The operator must append the line of a mint
+  under the current key. The operator must lift the line of a promote to the
+  top. The caller holds no such edit, because D-01 takes site content alone.
