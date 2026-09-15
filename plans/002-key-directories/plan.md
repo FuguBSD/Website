@@ -56,10 +56,11 @@ mints each subordinate key that it needs. Step 7 waits on step 6.
 
 ### What this plan does not resolve
 
-The declaration of each new key in FuguBSD/Tooling, per SITE-ROTATE-11 and
-SITE-ROTATE-21. Tooling holds the files that a declaration writes, so it is an
-operator step of the rollout and not a step of this plan. Tooling declares
-`fugureleng-1-release` today, and each `admin` key takes the same step.
+The declaration of each new key that signs a release in FuguBSD/Tooling, per
+SITE-ROTATE-11 and SITE-ROTATE-21. Tooling holds the files that a declaration
+writes, so it is an operator step of the rollout and not a step of this plan.
+Tooling declares `fugureleng-1-release` today. An `admin` key signs no release,
+so it takes no declaration.
 
 The consumers that the signify tier serves. Each one takes a sync of
 `deps/KEYS.txt`, or a recorded digest of its own. That work belongs to the
