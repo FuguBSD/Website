@@ -16,3 +16,15 @@ page "404.html" {
 	body     = 404.body.html
 	unlinked = yes
 }
+
+# The published keys of fugureleng. The rotation
+# writes this directory.
+keys "releng" {
+	org = fugureleng
+	url = https://www.fugubsd.org/releng
+}
+
+key "fugureleng-1-root" {
+	status = current
+	since  = 2026-09-15
+}
