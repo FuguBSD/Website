@@ -35,6 +35,11 @@ Do not count the clones of `Projects/`. That list is short, and it gives a low
 number. The workspace holds no clone of FuguBench, and none of FuguSeed, and
 both of them break.
 
+FuguWeb is on both sides of that list. It is one of the five, and its reusable
+workflow is the one that a key step of this site runs. FuguWeb therefore had to
+repair its own `make deps` before it made the release that this repository pins.
+That order was not in this plan.
+
 This repository is not one of the five. `deps/SHA256.txt` records the digest of
 each distribution that a key step installs, per SITE-ROTATE-32. A key step
 therefore runs while the site serves no key directory.
@@ -56,7 +61,9 @@ therefore runs while the site serves no key directory.
 
 ### What lands now
 
-Step 1.
+Step 1 landed. This change moves the FuguWeb pin to v0.6.1. That release names
+the install root of the key workflow, so `fuguweb` and its modules both reach
+the later steps.
 
 ### What waits, and on what
 
@@ -73,4 +80,5 @@ file.
 
 The five consumers that the signify tier serves. Each one takes a recorded
 digest, or the new key of the declaration. That work belongs to the consumer and
-to Tooling.
+to Tooling. FuguWeb is done, because it recorded the digest of its own Fugu
+dependency and then it released v0.6.1. Four consumers remain.
