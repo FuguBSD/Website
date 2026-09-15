@@ -28,3 +28,8 @@ key "fugureleng-1-root" {
 	status = current
 	since  = 2026-09-15
 }
+
+key "fugureleng-1-release" {
+	status = current
+	since  = 2026-09-15
+}
