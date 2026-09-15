@@ -19,8 +19,9 @@ this change removes the file that the URL answers. A consumer whose `dist` entry
 carries no recorded digest reaches the signify tier, and its `make deps` then
 fails.
 
-Five consumers break: FuguBench, FuguSeed, FuguTTX, FuguVM and FuguWeb. Measured
-on 2026-09-15. To measure it again, list the organization:
+The measurement of 2026-09-15 found five broken consumers: FuguBench, FuguSeed,
+FuguTTX, FuguVM and FuguWeb. FuguWeb then recorded its digest, and four
+consumers remain today. To measure it again, list the organization:
 
 ```sh
 gh repo list FuguBSD --limit 50 --json name --jq '.[].name'
@@ -35,39 +36,35 @@ Do not count the clones of `Projects/`. That list is short, and it gives a low
 number. The workspace holds no clone of FuguBench, and none of FuguSeed, and
 both of them break.
 
-FuguWeb is on both sides of that list. It is one of the five, and its reusable
-workflow is the one that a key step of this site runs. FuguWeb therefore had to
-repair its own `make deps` before it made the release that this repository pins.
-That order was not in this plan.
-
 This repository is not one of the five. `deps/SHA256.txt` records the digest of
 each distribution that a key step installs, per SITE-ROTATE-32. A key step
 therefore runs while the site serves no key directory.
 
 ## Work
 
-1. The specification, the caller and the guards. This change.
-2. The operator writes the App credentials of each environment, and the
+1. The specification, the caller and the guards.
+2. The FuguWeb pin of v0.6.1, and the digest that `deps/SHA256.txt` records for
+   it. This change.
+3. The operator writes the App credentials of each environment, and the
    deployment-branch rule of each one, per SITE-ROTATE-4 and SITE-ROTATE-27.
-3. The operator runs the workflow with the step `mint`, the purpose `root`, the
+4. The operator runs the workflow with the step `mint`, the purpose `root`, the
    directory `releng` and the bootstrap flag. The run writes the `keys` block,
    the first key and the manifest in one commit, per SITE-KEYS-5.
-4. The operator repeats step 3 for the `admin` directory.
-5. The operator mints each subordinate key that a directory needs, such as the
+5. The operator repeats step 4 for the `admin` directory.
+6. The operator mints each subordinate key that a directory needs, such as the
    `release` purpose of `releng`.
-6. Delete `plans/002-key-directories/`.
+7. Delete `plans/002-key-directories/`.
 
 ## Status
 
 ### What lands now
 
-Step 1 landed. This change moves the FuguWeb pin to v0.6.1. That release names
-the install root of the key workflow, so `fuguweb` and its modules both reach
-the later steps.
+Step 1 landed. Step 2 lands now. The v0.6.1 release names the install root of
+the key workflow, so `fuguweb` and its modules both reach the later steps.
 
 ### What waits, and on what
 
-Steps 2 to 6 wait on the operator. Step 3 waits on step 2, because a run without
+Steps 3 to 7 wait on the operator. Step 4 waits on step 3, because a run without
 the App credentials mints no token.
 
 ### What this plan does not resolve
@@ -75,10 +72,10 @@ the App credentials mints no token.
 The declaration of each new key in FuguBSD/Tooling, per SITE-ROTATE-11 and
 SITE-ROTATE-21. Tooling holds the files that a declaration writes, so it is an
 operator step of the rollout and not a step of this plan. It waits on the key of
-step 3, because a declaration needs the published URL and the digest of a key
+step 4, because a declaration needs the published URL and the digest of a key
 file.
 
 The five consumers that the signify tier serves. Each one takes a recorded
 digest, or the new key of the declaration. That work belongs to the consumer and
 to Tooling. FuguWeb is done, because it recorded the digest of its own Fugu
-dependency and then it released v0.6.1. Four consumers remain.
+dependency. Four consumers remain.
