@@ -45,3 +45,10 @@ key "fuguadmin-1-root" {
 	status = current
 	since  = 2026-09-15
 }
+
+key "fuguadmin-1-contact" {
+	status      = current
+	since       = 2026-09-15
+	email       = security@fugubsd.org
+	fingerprint = 385244F1D122949472DCB448D2EEB1A95FE0B896
+}
