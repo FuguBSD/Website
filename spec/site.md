@@ -122,23 +122,26 @@ repository takes site content alone, per D-01.
   keys its digest on that URL. A plain `cpanm` of a URL reads the tarball with
   no check at all.
 - **SITE-ROTATE-32** — `deps/SHA256.txt` must record the digest of each `dist`
-  entry. `scripts/deps` reads a recorded digest before the signify tier, so
-  `make deps` of this repository reads no published key. A key step therefore
-  needs no published key. Each digest must agree with the signed `SHA256`
-  manifest of its release.
+  entry. `scripts/deps` reads a recorded digest before the signify tier, so a
+  key step of this repository reads no published key. Each digest must agree
+  with the signed `SHA256` manifest of its release.
 - **SITE-ROTATE-31** — The deps manifest must install the command of each signer
   that a key step runs. `signify(1)` makes a signify key and signs with it, and
   `gpg(1)` makes an OpenPGP key and signs with it. Perl holds no private key
   operation, so a step that finds no command writes no key.
-- **SITE-ROTATE-11** — The operator must declare each new key in
-  FuguBSD/Tooling, with the published URL and the sha256 of the key file. A
-  consumer that reaches the signify tier fails `make deps` until the declaration
-  lands. The callee outputs the URL and the digest, per FuguWeb WEB-ACTIONS-2,
-  and it declares no key, per FuguWeb WEB-ACTIONS-10.
+- **SITE-ROTATE-11** — The operator must declare each new key that signs a
+  release in FuguBSD/Tooling. The declaration must hold the published URL and
+  the sha256 of the key file. The operator must not declare a root key. A root
+  key signs no release, and each declared key verifies every signify-tier
+  download, per Tooling SYNC-KEYS-10. A consumer that reaches the signify tier
+  fails `make deps` until the declaration lands. The callee outputs the URL and
+  the digest, per FuguWeb WEB-ACTIONS-2, and it declares no key, per FuguWeb
+  WEB-ACTIONS-10.
 - **SITE-ROTATE-21** — The declaration must write `deps/KEYS.txt` and
   `org/sync/deps/KEYS.txt`. Tooling syncs the org pack into itself, so one copy
   alone leaves the other stale and fails the drift gate.
 - **SITE-ROTATE-22** — The line order of `deps/KEYS.txt` is the trust order, and
-  the current key leads the file. The operator must append the line of a mint
-  under the current key. The operator must lift the line of a promote to the
-  top. The caller holds no such edit, because D-01 takes site content alone.
+  the current key leads the file. The operator must append the line of a release
+  mint under the current key. The operator must lift the line of a release
+  promote to the top. The caller holds no such edit, because D-01 takes site
+  content alone.

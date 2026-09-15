@@ -329,12 +329,11 @@ subtest 'the manifest installs the command of each signer' => sub {
 subtest 'the digest file records each distribution' => sub {
 
 	# SITE-ROTATE-32. scripts/deps reads a recorded digest before
-	# the signify tier, so make deps of this repository reads no
-	# published key. A key step therefore needs no published key. A
-	# dist entry with no recorded digest falls to that tier, and the
-	# key step then needs the published key of deps/KEYS.txt. The
-	# test reads each manifest, so a later entry takes the guard
-	# with it.
+	# the signify tier, so a key step of this repository reads no
+	# published key. A dist entry with no recorded digest falls to
+	# that tier, and the key step then needs the published key of
+	# deps/KEYS.txt. The test reads each manifest, so a later entry
+	# takes the guard with it.
 	my $dir  = "$RealBin/../../deps";
 	my $sums = _slurp("$dir/SHA256.txt") // q{};
 	ok( length $sums, 'the digest file is there' ) or return;

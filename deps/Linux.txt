@@ -9,9 +9,9 @@ tool bin gitleaks https://github.com/gitleaks/gitleaks/releases/download/v8.30.1
 # fuguweb runs in the rotation workflow, beside a private key, so
 # each version is pinned here and never resolved at run time
 # (SITE-ROTATE-15). deps/SHA256.txt records the digest of each
-# tarball below, and a recorded digest outranks the signature, so
-# make deps of this repository reads no published key
-# (SITE-ROTATE-32). A key step therefore needs no published key.
+# tarball below. scripts/deps reads a recorded digest before the
+# signify tier, so a key step that runs make deps reads no
+# published key (SITE-ROTATE-32).
 # Each release below carries a signed SHA256 manifest, and each
 # digest agrees with the manifest of its own release.
 #
