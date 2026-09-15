@@ -62,8 +62,8 @@ WEB-KEYS, and this site holds the description and the key files.
 - **SITE-KEYS-8** — The `admin` block must name the contact address and the
   expiry of `security.txt`, and the `releng` block must name neither. The
   address is `mailto:security@fugubsd.org`, and it reaches the administrators.
-  The expiry must stay in the future, and the operator must move it each year.
-  FuguWeb WEB-KEYS-3 takes the two values in one block alone.
+  The expiry must stay in the future. The operator must move it before it
+  passes. FuguWeb WEB-KEYS-3 takes the two values in one block alone.
 
 <a id="site-rotate"></a>
 
