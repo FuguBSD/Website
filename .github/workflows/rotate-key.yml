@@ -129,7 +129,7 @@ concurrency:
 jobs:
   rotate:
     name: Rotate
-    # The commit of the v0.6.1 tag. The callee runs beside a private
+    # The commit of the v0.6.2 tag. The callee runs beside a private
     # key, so the reference is a commit and never a tag or a branch.
     uses: FuguBSD/FuguWeb/.github/workflows/keys-rotate.yml@69285c943d2a2d8511a48c9c56a1ccfaa2f7aa62
     secrets: inherit

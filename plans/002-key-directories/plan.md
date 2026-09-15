@@ -14,38 +14,21 @@ rotation workflow then writes each key, because no human handles a private key.
 
 ## Why the order matters
 
-`deps/KEYS.txt` of the org pack pins one published key by URL and digest, and
-this change removes the file that the URL answers. A consumer whose `dist` entry
-carries no recorded digest reaches the signify tier, and its `make deps` then
-fails.
-
-The measurement of 2026-09-15 found five broken consumers: FuguBench, FuguSeed,
-FuguTTX, FuguVM and FuguWeb. FuguWeb then recorded its digest, and four
-consumers remain today. To measure it again, list the organization:
-
-```sh
-gh repo list FuguBSD --limit 50 --json name --jq '.[].name'
-```
-
-Then read `deps/Linux.txt`, `deps/Darwin.txt` and `deps/OpenBSD.txt` of each
-name for a `dist` entry. Read `deps/SHA256.txt` of the same name for a digest of
-that URL. A `dist` entry with no recorded digest breaks. Fourteen of the names
-pin the key.
-
-Do not count the clones of `Projects/`. That list is short, and it gives a low
-number. The workspace holds no clone of FuguBench, and none of FuguSeed, and
-both of them break.
+`deps/KEYS.txt` of the org pack pins one published key by URL and digest. A
+consumer whose `dist` entry carries no recorded digest reaches the signify tier,
+and it reads that key. Step 1 removed the file that the earlier URL answered.
 
 This repository is not a broken consumer. `deps/SHA256.txt` records the digest
 of each distribution that a key step installs, per SITE-ROTATE-32. A key step
-therefore runs while the site serves no key directory.
+therefore needs no published key.
 
 ## Work
 
 1. The specification, the caller and the guards.
-2. The FuguWeb pin of v0.6.1, and the digest that `deps/SHA256.txt` records for
-   it. This change. It also amends SITE-ROTATE-32, because the v0.6.1 release
-   carries no signed manifest. No `releng` slot signs one yet.
+2. The pins of `deps/Darwin.txt` and `deps/Linux.txt`, and the digest that
+   `deps/SHA256.txt` records for each one. The pins name Fugu v0.5.1 and FuguWeb
+   v0.6.2. Each release carries a signed `SHA256` manifest, so SITE-ROTATE-32
+   holds every digest to that manifest.
 3. The operator writes the App credentials of each environment, and the
    deployment-branch rule of each one, per SITE-ROTATE-4 and SITE-ROTATE-27.
 4. The operator runs the workflow with the step `mint`, the purpose `root`, the
@@ -60,23 +43,25 @@ therefore runs while the site serves no key directory.
 
 ### What lands now
 
-Step 1 landed. Step 2 lands now. The v0.6.1 release names the install root of
-the key workflow, so `fuguweb` and its modules both reach the later steps.
+Step 1 landed first. The operator then ran step 3 for the `releng` environment,
+step 4, and step 6 for the `release` purpose. Step 2 landed last, because its
+two pins name releases that `fugureleng-1-release` signed. The `releng`
+directory stands, and that key signs a release again.
 
 ### What waits, and on what
 
-Steps 3 to 7 wait on the operator. Step 4 waits on step 3, because a run without
-the App credentials mints no token.
+The `admin` directory waits on the operator. Step 3 gives it the App credentials
+and the deployment-branch rule, and step 5 then mints its root key. Step 6 then
+mints each subordinate key that it needs. Step 7 waits on step 6.
 
 ### What this plan does not resolve
 
-The declaration of each new key in FuguBSD/Tooling, per SITE-ROTATE-11 and
-SITE-ROTATE-21. Tooling holds the files that a declaration writes, so it is an
-operator step of the rollout and not a step of this plan. It waits on the key of
-step 4, because a declaration needs the published URL and the digest of a key
-file.
+The declaration of each new key that signs a release in FuguBSD/Tooling, per
+SITE-ROTATE-11 and SITE-ROTATE-21. Tooling holds the files that a declaration
+writes, so it is an operator step of the rollout and not a step of this plan.
+Tooling declares `fugureleng-1-release` today. An `admin` key signs no release,
+so it takes no declaration.
 
-The four consumers that the signify tier serves. Each one takes a recorded
-digest, or the new key of the declaration. That work belongs to the consumer and
-to Tooling. FuguWeb is done, because it recorded the digest of its own Fugu
-dependency.
+The consumers that the signify tier serves. Each one takes a sync of
+`deps/KEYS.txt`, or a recorded digest of its own. That work belongs to the
+consumer and to Tooling.
