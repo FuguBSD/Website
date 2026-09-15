@@ -37,8 +37,10 @@ key "fugureleng-1-release" {
 # The published keys of fuguadmin. The rotation
 # writes this directory.
 keys "admin" {
-	org = fuguadmin
-	url = https://www.fugubsd.org/admin
+	org     = fuguadmin
+	url     = https://www.fugubsd.org/admin
+	contact = mailto:security@fugubsd.org
+	expires = 2027-09-15T00:00:00Z
 }
 
 key "fuguadmin-1-root" {
