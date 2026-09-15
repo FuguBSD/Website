@@ -33,3 +33,15 @@ key "fugureleng-1-release" {
 	status = current
 	since  = 2026-09-15
 }
+
+# The published keys of fuguadmin. The rotation
+# writes this directory.
+keys "admin" {
+	org = fuguadmin
+	url = https://www.fugubsd.org/admin
+}
+
+key "fuguadmin-1-root" {
+	status = current
+	since  = 2026-09-15
+}
