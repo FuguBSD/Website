@@ -12,30 +12,26 @@ tool bin gitleaks https://github.com/gitleaks/gitleaks/releases/download/v8.30.1
 # tarball below, and a recorded digest outranks the signature, so
 # make deps of this repository reads no published key
 # (SITE-ROTATE-32). A key step therefore runs while the site serves
-# no key directory. The Fugu digest agrees with the signed SHA256
-# manifest of that release. The FuguWeb release carries no
-# manifest. Its digest agrees with the tarball that run 34919125469
-# of FuguBSD/FuguWeb kept, measured on 2026-09-15. That run
-# artifact expires on 2026-12-14.
+# no key directory. Each release below carries a signed SHA256
+# manifest, and each digest agrees with the manifest of its own
+# release.
 #
 # To bump a pin, edit the URL below, and then run this command:
 #
 #   scripts/deps --update-sums --force
 #
-# The Fugu entry needs --force, because that release carries a
-# signed SHA256 manifest. 'scripts/deps --update-sums' alone skips
-# such a URL. It prints "skipped the signed entry", records
-# nothing, and exits 0. A bump of Fugu without --force therefore
-# returns the entry to the signify tier, and a key step then needs
-# the site that it writes. The FuguWeb release carries no manifest,
-# so '--update-sums' alone records that entry.
+# Each entry needs --force, because each release carries a signed
+# SHA256 manifest. 'scripts/deps --update-sums' alone skips such a
+# URL. It prints "skipped the signed entry", records nothing, and
+# exits 0. A bump without --force therefore returns the entry to
+# the signify tier, and a key step then needs the site that it
+# writes.
 #
 # --force records the bytes that the server serves, also for a
-# signed entry. Check each digest after a bump. Compare a signed
-# entry with the signed manifest of its release. Compare an
-# unsigned entry with the tarball that its release run kept.
-runtime dist https://github.com/FuguBSD/Fugu/releases/download/v0.5.0/Fugu.tar.gz
-runtime dist https://github.com/FuguBSD/FuguWeb/releases/download/v0.6.1/App-FuguWeb.tar.gz
+# signed entry. Check each digest after a bump. Compare it with the
+# signed manifest of its release.
+runtime dist https://github.com/FuguBSD/Fugu/releases/download/v0.5.1/Fugu.tar.gz
+runtime dist https://github.com/FuguBSD/FuguWeb/releases/download/v0.6.2/App-FuguWeb.tar.gz
 runtime pkg mandoc
 runtime pkg lowdown
 

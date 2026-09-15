@@ -125,8 +125,7 @@ repository takes site content alone, per D-01.
   entry. `scripts/deps` reads a recorded digest before the signify tier, so
   `make deps` of this repository reads no published key. A key step therefore
   runs while the site serves no key directory. Each digest must agree with the
-  signed `SHA256` manifest of its release. When a release carries no such
-  manifest, the digest must agree with the tarball that its release run kept.
+  signed `SHA256` manifest of its release.
 - **SITE-ROTATE-31** — The deps manifest must install the command of each signer
   that a key step runs. `signify(1)` makes a signify key and signs with it, and
   `gpg(1)` makes an OpenPGP key and signs with it. Perl holds no private key

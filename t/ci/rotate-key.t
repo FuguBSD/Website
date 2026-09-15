@@ -177,7 +177,7 @@ subtest 'the caller pins the callee to a commit' => sub {
 
 	# The callee runs beside a private key, so a tag or a branch
 	# would let another commit reach that key. The pin below is
-	# the commit of the v0.6.1 tag.
+	# the commit of the v0.6.2 tag.
 	like( $pin, qr/^[0-9a-f]{40}$/, 'and it pins a commit' );
 };
 
