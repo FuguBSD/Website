@@ -59,6 +59,11 @@ WEB-KEYS, and this site holds the description and the key files.
   stay published, a retired key file included. A consumer that pins an old key
   verifies a release that the key signed. A step of the rotation workflow
   removes a binding file alone, per FuguWeb WEB-TRUST-5 and WEB-TRUST-7.
+- **SITE-KEYS-8** — The `admin` block must name the contact address and the
+  expiry of `security.txt`, and the `releng` block must name neither. The
+  address is `mailto:security@fugubsd.org`, and it reaches the administrators.
+  The expiry must stay in the future, and the operator must move it each year.
+  FuguWeb WEB-KEYS-3 takes the two values in one block alone.
 
 <a id="site-rotate"></a>
 
