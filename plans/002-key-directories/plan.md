@@ -43,16 +43,16 @@ therefore needs no published key.
 
 ### What lands now
 
-Steps 1 and 2 landed. The operator then ran step 3 for the `releng` environment,
-step 4, and step 6 for the `release` purpose. The `releng` directory stands, and
-`fugureleng-1-release` signs a release again. The two pins of step 2 name
-releases that it signed.
+Step 1 landed first. The operator then ran step 3 for the `releng` environment,
+step 4, and step 6 for the `release` purpose. Step 2 landed last, because its
+two pins name releases that `fugureleng-1-release` signed. The `releng`
+directory stands, and that key signs a release again.
 
 ### What waits, and on what
 
 The `admin` directory waits on the operator. Step 3 gives it the App credentials
 and the deployment-branch rule, and step 5 then mints its root key. Step 6 then
-mints each subordinate key that it needs. Step 7 waits on step 5.
+mints each subordinate key that it needs. Step 7 waits on step 6.
 
 ### What this plan does not resolve
 
