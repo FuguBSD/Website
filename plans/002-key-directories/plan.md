@@ -36,15 +36,16 @@ Do not count the clones of `Projects/`. That list is short, and it gives a low
 number. The workspace holds no clone of FuguBench, and none of FuguSeed, and
 both of them break.
 
-This repository is not one of the five. `deps/SHA256.txt` records the digest of
-each distribution that a key step installs, per SITE-ROTATE-32. A key step
+This repository is not a broken consumer. `deps/SHA256.txt` records the digest
+of each distribution that a key step installs, per SITE-ROTATE-32. A key step
 therefore runs while the site serves no key directory.
 
 ## Work
 
 1. The specification, the caller and the guards.
 2. The FuguWeb pin of v0.6.1, and the digest that `deps/SHA256.txt` records for
-   it. This change.
+   it. This change. It also amends SITE-ROTATE-32, because the v0.6.1 release
+   carries no signed manifest. No `releng` slot signs one yet.
 3. The operator writes the App credentials of each environment, and the
    deployment-branch rule of each one, per SITE-ROTATE-4 and SITE-ROTATE-27.
 4. The operator runs the workflow with the step `mint`, the purpose `root`, the
@@ -75,7 +76,7 @@ operator step of the rollout and not a step of this plan. It waits on the key of
 step 4, because a declaration needs the published URL and the digest of a key
 file.
 
-The five consumers that the signify tier serves. Each one takes a recorded
+The four consumers that the signify tier serves. Each one takes a recorded
 digest, or the new key of the declaration. That work belongs to the consumer and
 to Tooling. FuguWeb is done, because it recorded the digest of its own Fugu
-dependency. Four consumers remain.
+dependency.
