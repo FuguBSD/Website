@@ -1,4 +1,4 @@
-# External dependencies of the website. scripts/deps installs each
+# External dependencies of the website. scripts/fugubench deps installs each
 # line. A key step signs the manifest of a key directory, so it needs
 # signify(1). The site build itself signs nothing.
 tool pkg signify-openbsd
@@ -9,7 +9,7 @@ tool bin gitleaks https://github.com/gitleaks/gitleaks/releases/download/v8.30.1
 # fuguweb runs in the rotation workflow, beside a private key, so
 # each version is pinned here and never resolved at run time
 # (SITE-ROTATE-15). deps/SHA256.txt records the digest of each
-# tarball below. scripts/deps reads a recorded digest before the
+# tarball below. scripts/fugubench deps reads a recorded digest before the
 # signify tier, so a key step that runs make deps reads no
 # published key (SITE-ROTATE-32).
 # Each release below carries a signed SHA256 manifest, and each
@@ -17,10 +17,10 @@ tool bin gitleaks https://github.com/gitleaks/gitleaks/releases/download/v8.30.1
 #
 # To bump a pin, edit the URL below, and then run this command:
 #
-#   scripts/deps --update-sums --force
+#   scripts/fugubench deps --update-sums --force
 #
 # Each entry needs --force, because each release carries a signed
-# SHA256 manifest. 'scripts/deps --update-sums' alone skips such a
+# SHA256 manifest. 'scripts/fugubench deps --update-sums' alone skips such a
 # URL. It prints "skipped the signed entry", records nothing, and
 # exits 0. A bump without --force therefore returns the entry to
 # the signify tier, and it then needs the published key of
@@ -29,8 +29,8 @@ tool bin gitleaks https://github.com/gitleaks/gitleaks/releases/download/v8.30.1
 # --force records the bytes that the server serves, also for a
 # signed entry. Check each digest after a bump. Compare it with the
 # signed manifest of its release.
-runtime dist https://github.com/FuguBSD/Fugu/releases/download/v0.5.1/Fugu.tar.gz
-runtime dist https://github.com/FuguBSD/FuguWeb/releases/download/v0.6.2/App-FuguWeb.tar.gz
+runtime dist https://github.com/FuguBSD/Fugu/releases/download/v0.5.3/Fugu.tar.gz
+runtime dist https://github.com/FuguBSD/FuguWeb/releases/download/v0.8.0/App-FuguWeb.tar.gz
 runtime pkg mandoc
 runtime pkg lowdown
 

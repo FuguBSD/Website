@@ -127,9 +127,9 @@ repository takes site content alone, per D-01.
   keys its digest on that URL. A plain `cpanm` of a URL reads the tarball with
   no check at all.
 - **SITE-ROTATE-32** — `deps/SHA256.txt` must record the digest of each `dist`
-  entry. `scripts/deps` reads a recorded digest before the signify tier, so a
-  key step of this repository reads no published key. Each digest must agree
-  with the signed `SHA256` manifest of its release.
+  entry. `scripts/fugubench deps` reads a recorded digest before the signify
+  tier, so a key step of this repository reads no published key. Each digest
+  must agree with the signed `SHA256` manifest of its release.
 - **SITE-ROTATE-31** — The deps manifest must install the command of each signer
   that a key step runs. `signify(1)` makes a signify key and signs with it, and
   `gpg(1)` makes an OpenPGP key and signs with it. Perl holds no private key

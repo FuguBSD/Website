@@ -177,7 +177,7 @@ subtest 'the caller pins the callee to a commit' => sub {
 
 	# The callee runs beside a private key, so a tag or a branch
 	# would let another commit reach that key. The pin below is
-	# the commit of the v0.6.2 tag.
+	# the commit of the v0.8.0 tag.
 	like( $pin, qr/^[0-9a-f]{40}$/, 'and it pins a commit' );
 };
 
@@ -328,7 +328,7 @@ subtest 'the manifest installs the command of each signer' => sub {
 
 subtest 'the digest file records each distribution' => sub {
 
-	# SITE-ROTATE-32. scripts/deps reads a recorded digest before
+	# SITE-ROTATE-32. scripts/fugubench deps reads a recorded digest before
 	# the signify tier, so a key step of this repository reads no
 	# published key. A dist entry with no recorded digest falls to
 	# that tier, and the key step then needs the published key of
